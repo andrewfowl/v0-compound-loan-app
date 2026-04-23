@@ -89,7 +89,7 @@ export function CollateralTab({ collateralLedger }: CollateralTabProps) {
                         </TableCell>
                         <TableCell className="text-right font-mono">—</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.provided)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.accruals, true)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.accruals)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.liquidated, true)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.reclaimed, true)}</TableCell>
                         <TableCell className="text-right font-mono">—</TableCell>
@@ -104,7 +104,7 @@ export function CollateralTab({ collateralLedger }: CollateralTabProps) {
                           <TableCell className="text-muted-foreground text-sm">{entry.date}</TableCell>
                           <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.start, entry.start < 0)}</TableCell>
                           <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.provided)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.accruals, true)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.accruals)}</TableCell>
                           <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.liquidated, true)}</TableCell>
                           <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.reclaimed, true)}</TableCell>
                           <TableCell className="text-right font-mono text-sm">
