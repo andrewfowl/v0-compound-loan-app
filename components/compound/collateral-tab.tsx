@@ -67,12 +67,12 @@ export function CollateralTab({ collateralLedger }: CollateralTabProps) {
                         <TableCell className="font-medium pl-6">{entry.token}</TableCell>
                         <TableCell>{entry.item}</TableCell>
                         <TableCell>{entry.date}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.start)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.start, entry.start < 0)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(entry.provided)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(entry.accruals, true)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(entry.liquidated, true)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(entry.reclaimed, true)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.end)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.end, entry.end < 0)}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow key={`s-${group.periodLabel}`} className="border-t-2 font-semibold bg-muted/30">
