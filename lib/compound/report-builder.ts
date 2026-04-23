@@ -155,10 +155,12 @@ export function groupLoanLedgerByPeriod(
     periodLabel: getPeriodLabel(key, period),
     rows,
     subtotals: {
+      startBalance: rows[0]?.start ?? 0,
       proceeds: rows.reduce((s, r) => s + r.proceeds, 0),
       accruals: rows.reduce((s, r) => s + r.accruals, 0),
       liquidated: rows.reduce((s, r) => s + r.liquidated, 0),
       payments: rows.reduce((s, r) => s + r.payments, 0),
+      endBalance: rows[rows.length - 1]?.end ?? 0,
     },
   }))
 }
@@ -177,10 +179,12 @@ export function groupCollateralLedgerByPeriod(
     periodLabel: getPeriodLabel(key, period),
     rows,
     subtotals: {
+      startBalance: rows[0]?.start ?? 0,
       provided: rows.reduce((s, r) => s + r.provided, 0),
       accruals: rows.reduce((s, r) => s + r.accruals, 0),
       liquidated: rows.reduce((s, r) => s + r.liquidated, 0),
       reclaimed: rows.reduce((s, r) => s + r.reclaimed, 0),
+      endBalance: rows[rows.length - 1]?.end ?? 0,
     },
   }))
 }

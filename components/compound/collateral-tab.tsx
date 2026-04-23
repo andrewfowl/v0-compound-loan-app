@@ -87,12 +87,12 @@ export function CollateralTab({ collateralLedger }: CollateralTabProps) {
                             ({group.rows.length} transaction{group.rows.length !== 1 ? "s" : ""})
                           </span>
                         </TableCell>
-                        <TableCell className="text-right font-mono">—</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.startBalance, group.subtotals.startBalance < 0)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.provided)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.accruals)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.liquidated, true)}</TableCell>
                         <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.reclaimed, true)}</TableCell>
-                        <TableCell className="text-right font-mono">—</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.endBalance, group.subtotals.endBalance < 0)}</TableCell>
                       </TableRow>
 
                       {/* Drill-down rows */}
