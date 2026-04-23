@@ -1,22 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kryptosFetch } from "@/lib/kryptos"
-
-type AccountType = "collateral" | "debt"
-type ActivityType = "deposit" | "redemption" | "borrowing" | "repayment" | "liquidation" | "interest"
-type EventName = "Mint" | "Redeem" | "Borrow" | "RepayBorrow" | "LiquidateBorrow"
-
-type CompoundEvent = {
-  id: string
-  blockNumber: string
-  timestamp: string
-  transactionHash: string
-  accountType: AccountType
-  activity: ActivityType
-  eventName: EventName
-  asset: string
-  amount: string
-  amountUsd: string
-}
+import type { AccountType, ActivityType, EventName, CompoundEvent } from "@/lib/compound/types"
 
 const USE_KRYPTOS = process.env.KRYPTOS_ENABLED === "true"
 
