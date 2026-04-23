@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -44,6 +51,8 @@ export default function ActivityPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [source, setSource] = useState("")
+  const [loanPeriod, setLoanPeriod] = useState<"monthly" | "quarterly" | "annual">("monthly")
+  const [collateralPeriod, setCollateralPeriod] = useState<"monthly" | "quarterly" | "annual">("monthly")
 
   const fetchActivity = async () => {
     setLoading(true)
@@ -226,6 +235,71 @@ export default function ActivityPage() {
     }
   }, [events])
 
+  type LedgerEntry = {
+    token: string; item: string; date: string
+    start: number; proceeds: number; accruals: number; liquidated: number; payments: number; end: number
+  }
+  type CollateralLedgerEntry = {
+    token: string; item: string; date: string
+    start: number; provided: number; accruals: number; liquidated: number; reclaimed: number; end: number
+  }
+  type PeriodGroup<T> = { periodLabel: string; rows: T[]; subtotals: Record<string, number> }
+
+  function getPeriodKey(date: string, period: "monthly" | "quarterly" | "annual"): string {
+    const d = new Date(date)
+    const y = d.getFullYear()
+    const m = d.getMonth()
+    if (period === "annual") return `${y}`
+    if (period === "quarterly") return `${y} Q${Math.floor(m / 3) + 1}`
+    return `${y}/${String(m + 1).padStart(2, "0")}`
+  }
+
+  function getPeriodLabel(key: string, period: "monthly" | "quarterly" | "annual"): string {
+    if (period === "annual") return key
+    if (period === "quarterly") return key
+    const [y, m] = key.split("/")
+    const monthName = new Date(Number(y), Number(m) - 1).toLocaleString("en-US", { month: "long" })
+    return `${monthName} ${y}`
+  }
+
+  const groupedLoanLedger = useMemo((): PeriodGroup<LedgerEntry>[] => {
+    const groups: Map<string, LedgerEntry[]> = new Map()
+    loanLedger.forEach((row) => {
+      const key = getPeriodKey(row.date, loanPeriod)
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(row)
+    })
+    return Array.from(groups.entries()).map(([key, rows]) => ({
+      periodLabel: getPeriodLabel(key, loanPeriod),
+      rows,
+      subtotals: {
+        proceeds: rows.reduce((s, r) => s + r.proceeds, 0),
+        accruals: rows.reduce((s, r) => s + r.accruals, 0),
+        liquidated: rows.reduce((s, r) => s + r.liquidated, 0),
+        payments: rows.reduce((s, r) => s + r.payments, 0),
+      },
+    }))
+  }, [loanLedger, loanPeriod])
+
+  const groupedCollateralLedger = useMemo((): PeriodGroup<CollateralLedgerEntry>[] => {
+    const groups: Map<string, CollateralLedgerEntry[]> = new Map()
+    collateralLedger.forEach((row) => {
+      const key = getPeriodKey(row.date, collateralPeriod)
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(row)
+    })
+    return Array.from(groups.entries()).map(([key, rows]) => ({
+      periodLabel: getPeriodLabel(key, collateralPeriod),
+      rows,
+      subtotals: {
+        provided: rows.reduce((s, r) => s + r.provided, 0),
+        accruals: rows.reduce((s, r) => s + r.accruals, 0),
+        liquidated: rows.reduce((s, r) => s + r.liquidated, 0),
+        reclaimed: rows.reduce((s, r) => s + r.reclaimed, 0),
+      },
+    }))
+  }, [collateralLedger, collateralPeriod])
+
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
 
   const formatDate = (timestamp: string) => {
@@ -374,8 +448,18 @@ export default function ActivityPage() {
             {/* Loan Ledger Tab */}
             <TabsContent value="loan">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-center text-lg border-b pb-2">LOAN</CardTitle>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">LOAN</CardTitle>
+                  <Select value={loanPeriod} onValueChange={(v) => setLoanPeriod(v as typeof loanPeriod)}>
+                    <SelectTrigger className="w-36 h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="annual">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent className="p-0">
                   {loanLedger.length === 0 ? (
@@ -397,30 +481,56 @@ export default function ActivityPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {loanLedger.map((entry, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium">{entry.token}</TableCell>
-                              <TableCell>{entry.item}</TableCell>
-                              <TableCell>{entry.date}</TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.start, entry.start < 0)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.proceeds, true)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.accruals, true)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.liquidated)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.payments)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.end, entry.end < 0)}
-                              </TableCell>
-                            </TableRow>
+                          {groupedLoanLedger.map((group) => (
+                            <>
+                              <TableRow key={`header-${group.periodLabel}`} className="bg-muted/60">
+                                <TableCell colSpan={9} className="font-semibold text-sm py-1 px-4">
+                                  {group.periodLabel}
+                                </TableCell>
+                              </TableRow>
+                              {group.rows.map((entry, idx) => (
+                                <TableRow key={`${group.periodLabel}-${idx}`}>
+                                  <TableCell className="font-medium pl-6">{entry.token}</TableCell>
+                                  <TableCell>{entry.item}</TableCell>
+                                  <TableCell>{entry.date}</TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.start, entry.start < 0)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.proceeds, true)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.accruals, true)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.liquidated)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.payments)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.end, entry.end < 0)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow key={`subtotal-${group.periodLabel}`} className="border-t-2 font-semibold bg-muted/30">
+                                <TableCell colSpan={3} className="pl-6 text-sm text-muted-foreground">Subtotal</TableCell>
+                                <TableCell className="text-right font-mono">—</TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.proceeds, true)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.accruals, true)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.liquidated)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.payments)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">—</TableCell>
+                              </TableRow>
+                            </>
                           ))}
                         </TableBody>
                       </Table>
@@ -433,8 +543,18 @@ export default function ActivityPage() {
             {/* Collateral Ledger Tab */}
             <TabsContent value="collateral">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">COLLATERAL</CardTitle>
+                  <Select value={collateralPeriod} onValueChange={(v) => setCollateralPeriod(v as typeof collateralPeriod)}>
+                    <SelectTrigger className="w-36 h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="annual">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent className="p-0">
                   {collateralLedger.length === 0 ? (
@@ -456,30 +576,56 @@ export default function ActivityPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {collateralLedger.map((entry, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium">{entry.token}</TableCell>
-                              <TableCell>{entry.item}</TableCell>
-                              <TableCell>{entry.date}</TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.start)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.provided)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.accruals, true)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.liquidated, true)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.reclaimed, true)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatLedgerValue(entry.end)}
-                              </TableCell>
-                            </TableRow>
+                          {groupedCollateralLedger.map((group) => (
+                            <>
+                              <TableRow key={`header-${group.periodLabel}`} className="bg-muted/60">
+                                <TableCell colSpan={9} className="font-semibold text-sm py-1 px-4">
+                                  {group.periodLabel}
+                                </TableCell>
+                              </TableRow>
+                              {group.rows.map((entry, idx) => (
+                                <TableRow key={`${group.periodLabel}-${idx}`}>
+                                  <TableCell className="font-medium pl-6">{entry.token}</TableCell>
+                                  <TableCell>{entry.item}</TableCell>
+                                  <TableCell>{entry.date}</TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.start)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.provided)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.accruals, true)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.liquidated, true)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.reclaimed, true)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {formatLedgerValue(entry.end)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow key={`subtotal-${group.periodLabel}`} className="border-t-2 font-semibold bg-muted/30">
+                                <TableCell colSpan={3} className="pl-6 text-sm text-muted-foreground">Subtotal</TableCell>
+                                <TableCell className="text-right font-mono">—</TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.provided)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.accruals, true)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.liquidated, true)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  {formatLedgerValue(group.subtotals.reclaimed, true)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono">—</TableCell>
+                              </TableRow>
+                            </>
                           ))}
                         </TableBody>
                       </Table>
