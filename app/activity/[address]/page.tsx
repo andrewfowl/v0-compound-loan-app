@@ -71,7 +71,26 @@ export default function ActivityPage() {
     }
   }, [address])
 
-  const { collateralSummary, debtSummary, collateralTokens, debtTokens } = useMemo(() => {
+  // Item label mapping for ledger display
+  const getItemLabel = (activity: ActivityType, accountType: AccountType): string => {
+    const labels: Record<string, Record<string, string>> = {
+      collateral: {
+        deposit: "Deposit",
+        redemption: "Redeem",
+        liquidation: "Liquidate",
+        interest: "Interest",
+      },
+      debt: {
+        borrowing: "Borrowed crypto",
+        repayment: "Paid by borrower",
+        liquidation: "Paid by liquidator",
+        interest: "Interest",
+      },
+    }
+    return labels[accountType]?.[activity] || activity
+  }
+
+  const { collateralSummary, debtSummary, collateralTokens, debtTokens, loanLedger, collateralLedger } = useMemo(() => {
     const collateral: SummaryData = {
       deposited: {},
       redeemed: {},
@@ -87,24 +106,112 @@ export default function ActivityPage() {
     const collTokens = new Set<string>()
     const dbtTokens = new Set<string>()
 
-    events.forEach((e) => {
-      const amt = parseFloat(e.amountUsd)
+    // Ledger entries by token
+    type LedgerEntry = {
+      token: string
+      item: string
+      date: string
+      start: number
+      proceeds: number
+      accruals: number
+      liquidated: number
+      payments: number
+      end: number
+    }
+    type CollateralLedgerEntry = {
+      token: string
+      item: string
+      date: string
+      start: number
+      provided: number
+      accruals: number
+      liquidated: number
+      reclaimed: number
+      end: number
+    }
+
+    const loanEntries: LedgerEntry[] = []
+    const collateralEntries: CollateralLedgerEntry[] = []
+    
+    // Running balances by token
+    const loanBalances: Record<string, number> = {}
+    const collateralBalances: Record<string, number> = {}
+
+    // Sort events by timestamp for running balance calculation
+    const sortedEvents = [...events].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+
+    sortedEvents.forEach((e) => {
+      const amt = parseFloat(e.amount)
+      const amtUsd = parseFloat(e.amountUsd)
+      const date = new Date(e.timestamp).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" })
+      
       if (e.accountType === "collateral") {
         collTokens.add(e.asset)
+        const start = collateralBalances[e.asset] || 0
+        let provided = 0, accruals = 0, liquidated = 0, reclaimed = 0
+        
         if (e.activity === "deposit") {
-          collateral.deposited[e.asset] = (collateral.deposited[e.asset] || 0) + amt
+          collateral.deposited[e.asset] = (collateral.deposited[e.asset] || 0) + amtUsd
+          provided = amt
         } else if (e.activity === "redemption") {
-          collateral.redeemed[e.asset] = (collateral.redeemed[e.asset] || 0) + amt
+          collateral.redeemed[e.asset] = (collateral.redeemed[e.asset] || 0) + amtUsd
+          reclaimed = amt
         } else if (e.activity === "liquidation") {
-          collateral.seized[e.asset] = (collateral.seized[e.asset] || 0) + amt
+          collateral.seized[e.asset] = (collateral.seized[e.asset] || 0) + amtUsd
+          liquidated = amt
+        } else if (e.activity === "interest") {
+          collateral["interest income"][e.asset] = (collateral["interest income"][e.asset] || 0) + amtUsd
+          accruals = amt
         }
+        
+        const end = start + provided + accruals - liquidated - reclaimed
+        collateralBalances[e.asset] = end
+        
+        collateralEntries.push({
+          token: e.asset,
+          item: getItemLabel(e.activity, e.accountType),
+          date,
+          start,
+          provided,
+          accruals,
+          liquidated,
+          reclaimed,
+          end,
+        })
       } else {
         dbtTokens.add(e.asset)
+        const start = loanBalances[e.asset] || 0
+        let proceeds = 0, accruals = 0, liquidated = 0, payments = 0
+        
         if (e.activity === "borrowing") {
-          debt.Borrow[e.asset] = (debt.Borrow[e.asset] || 0) + amt
+          debt.Borrow[e.asset] = (debt.Borrow[e.asset] || 0) + amtUsd
+          proceeds = amt
         } else if (e.activity === "repayment") {
-          debt.RepayBorrow[e.asset] = (debt.RepayBorrow[e.asset] || 0) + amt
+          debt.RepayBorrow[e.asset] = (debt.RepayBorrow[e.asset] || 0) + amtUsd
+          payments = amt
+        } else if (e.activity === "liquidation") {
+          liquidated = amt
+        } else if (e.activity === "interest") {
+          debt["interest expense"][e.asset] = (debt["interest expense"][e.asset] || 0) + amtUsd
+          accruals = amt
         }
+        
+        const end = start + proceeds + accruals - liquidated - payments
+        loanBalances[e.asset] = end
+        
+        loanEntries.push({
+          token: e.asset,
+          item: getItemLabel(e.activity, e.accountType),
+          date,
+          start,
+          proceeds,
+          accruals,
+          liquidated,
+          payments,
+          end,
+        })
       }
     })
 
@@ -113,6 +220,8 @@ export default function ActivityPage() {
       debtSummary: debt,
       collateralTokens: Array.from(collTokens).sort(),
       debtTokens: Array.from(dbtTokens).sort(),
+      loanLedger: loanEntries,
+      collateralLedger: collateralEntries,
     }
   }, [events])
 
@@ -130,6 +239,12 @@ export default function ActivityPage() {
     if (value === 0) return "-"
     const formatted = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     return negative ? `(${formatted})` : formatted
+  }
+
+  const formatLedgerValue = (value: number, isDebit = false) => {
+    if (value === 0) return "-"
+    const formatted = value.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    return isDebit ? `(${formatted})` : formatted
   }
 
   return (
@@ -245,6 +360,116 @@ export default function ActivityPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Detailed Loan Ledger */}
+            {loanLedger.length > 0 && (
+              <Card className="mb-8">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-center text-lg border-b pb-2">LOAN</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b-2">
+                          <TableHead className="font-bold">Token</TableHead>
+                          <TableHead className="font-bold">Item</TableHead>
+                          <TableHead className="font-bold">Date</TableHead>
+                          <TableHead className="text-right font-bold italic">Start</TableHead>
+                          <TableHead className="text-right font-bold">Proceeds</TableHead>
+                          <TableHead className="text-right font-bold">Accruals</TableHead>
+                          <TableHead className="text-right font-bold">Liquidated</TableHead>
+                          <TableHead className="text-right font-bold">Payments</TableHead>
+                          <TableHead className="text-right font-bold italic">End</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loanLedger.map((entry, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{entry.token}</TableCell>
+                            <TableCell>{entry.item}</TableCell>
+                            <TableCell>{entry.date}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.start, entry.start < 0)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.proceeds, true)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.accruals, true)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.liquidated)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.payments)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.end, entry.end < 0)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Detailed Collateral Ledger */}
+            {collateralLedger.length > 0 && (
+              <Card className="mb-8">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b-2">
+                          <TableHead className="font-bold">Token</TableHead>
+                          <TableHead className="font-bold">Item</TableHead>
+                          <TableHead className="font-bold">Date</TableHead>
+                          <TableHead className="text-right font-bold italic">Start</TableHead>
+                          <TableHead className="text-right font-bold">Provided</TableHead>
+                          <TableHead className="text-right font-bold">Accruals</TableHead>
+                          <TableHead className="text-right font-bold">Liquidated</TableHead>
+                          <TableHead className="text-right font-bold">Reclaimed</TableHead>
+                          <TableHead className="text-right font-bold italic">End</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {collateralLedger.map((entry, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{entry.token}</TableCell>
+                            <TableCell>{entry.item}</TableCell>
+                            <TableCell>{entry.date}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.start)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.provided)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.accruals, true)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.liquidated, true)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.reclaimed, true)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatLedgerValue(entry.end)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Raw Transaction Table */}
             <Card>
