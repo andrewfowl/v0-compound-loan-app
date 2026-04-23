@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react"
 
 type AccountType = "collateral" | "debt"
@@ -290,188 +291,205 @@ export default function ActivityPage() {
 
         {loading ? (
           <div className="space-y-4">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-96 w-full" />
+            <Skeleton className="h-12 w-full max-w-md" />
+            <Skeleton className="h-64 w-full" />
           </div>
         ) : (
-          <>
-            {/* Summary Tables */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Collateral Summary */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b-2">
-                        <TableHead className="font-bold">ACTIVITY</TableHead>
-                        {collateralTokens.map((token) => (
-                          <TableHead key={token} className="text-right font-bold">{token}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(collateralSummary).map(([activity, tokens]) => (
-                        <TableRow key={activity}>
-                          <TableCell className="font-medium">{activity}</TableCell>
+          <Tabs defaultValue="summary" className="w-full">
+            <TabsList className="grid w-full max-w-lg grid-cols-4 mb-6">
+              <TabsTrigger value="summary">Summary</TabsTrigger>
+              <TabsTrigger value="loan">Loan</TabsTrigger>
+              <TabsTrigger value="collateral">Collateral</TabsTrigger>
+              <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            </TabsList>
+
+            {/* Summary Tab */}
+            <TabsContent value="summary" className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Collateral Summary */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b-2">
+                          <TableHead className="font-bold">ACTIVITY</TableHead>
                           {collateralTokens.map((token) => (
-                            <TableCell key={token} className="text-right font-mono">
-                              {formatUsd(tokens[token] || 0, activity === "deposited")}
-                            </TableCell>
+                            <TableHead key={token} className="text-right font-bold">{token}</TableHead>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              {/* Debt Summary */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-center text-lg border-b pb-2">DEBT</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b-2">
-                        <TableHead className="font-bold">ACTIVITY</TableHead>
-                        {debtTokens.map((token) => (
-                          <TableHead key={token} className="text-right font-bold">{token}</TableHead>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(collateralSummary).map(([activity, tokens]) => (
+                          <TableRow key={activity}>
+                            <TableCell className="font-medium">{activity}</TableCell>
+                            {collateralTokens.map((token) => (
+                              <TableCell key={token} className="text-right font-mono">
+                                {formatUsd(tokens[token] || 0, activity === "deposited")}
+                              </TableCell>
+                            ))}
+                          </TableRow>
                         ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(debtSummary).map(([activity, tokens]) => (
-                        <TableRow key={activity}>
-                          <TableCell className="font-medium">{activity}</TableCell>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Debt Summary */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-center text-lg border-b pb-2">DEBT</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b-2">
+                          <TableHead className="font-bold">ACTIVITY</TableHead>
                           {debtTokens.map((token) => (
-                            <TableCell key={token} className="text-right font-mono">
-                              {formatUsd(tokens[token] || 0, activity === "Borrow")}
-                            </TableCell>
+                            <TableHead key={token} className="text-right font-bold">{token}</TableHead>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(debtSummary).map(([activity, tokens]) => (
+                          <TableRow key={activity}>
+                            <TableCell className="font-medium">{activity}</TableCell>
+                            {debtTokens.map((token) => (
+                              <TableCell key={token} className="text-right font-mono">
+                                {formatUsd(tokens[token] || 0, activity === "Borrow")}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
-            {/* Detailed Loan Ledger */}
-            {loanLedger.length > 0 && (
-              <Card className="mb-8">
+            {/* Loan Ledger Tab */}
+            <TabsContent value="loan">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-center text-lg border-b pb-2">LOAN</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b-2">
-                          <TableHead className="font-bold">Token</TableHead>
-                          <TableHead className="font-bold">Item</TableHead>
-                          <TableHead className="font-bold">Date</TableHead>
-                          <TableHead className="text-right font-bold italic">Start</TableHead>
-                          <TableHead className="text-right font-bold">Proceeds</TableHead>
-                          <TableHead className="text-right font-bold">Accruals</TableHead>
-                          <TableHead className="text-right font-bold">Liquidated</TableHead>
-                          <TableHead className="text-right font-bold">Payments</TableHead>
-                          <TableHead className="text-right font-bold italic">End</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {loanLedger.map((entry, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="font-medium">{entry.token}</TableCell>
-                            <TableCell>{entry.item}</TableCell>
-                            <TableCell>{entry.date}</TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.start, entry.start < 0)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.proceeds, true)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.accruals, true)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.liquidated)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.payments)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.end, entry.end < 0)}
-                            </TableCell>
+                  {loanLedger.length === 0 ? (
+                    <p className="text-center py-12 text-muted-foreground">No loan activity found</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-b-2">
+                            <TableHead className="font-bold">Token</TableHead>
+                            <TableHead className="font-bold">Item</TableHead>
+                            <TableHead className="font-bold">Date</TableHead>
+                            <TableHead className="text-right font-bold italic">Start</TableHead>
+                            <TableHead className="text-right font-bold">Proceeds</TableHead>
+                            <TableHead className="text-right font-bold">Accruals</TableHead>
+                            <TableHead className="text-right font-bold">Liquidated</TableHead>
+                            <TableHead className="text-right font-bold">Payments</TableHead>
+                            <TableHead className="text-right font-bold italic">End</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {loanLedger.map((entry, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{entry.token}</TableCell>
+                              <TableCell>{entry.item}</TableCell>
+                              <TableCell>{entry.date}</TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.start, entry.start < 0)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.proceeds, true)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.accruals, true)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.liquidated)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.payments)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.end, entry.end < 0)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            )}
+            </TabsContent>
 
-            {/* Detailed Collateral Ledger */}
-            {collateralLedger.length > 0 && (
-              <Card className="mb-8">
+            {/* Collateral Ledger Tab */}
+            <TabsContent value="collateral">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b-2">
-                          <TableHead className="font-bold">Token</TableHead>
-                          <TableHead className="font-bold">Item</TableHead>
-                          <TableHead className="font-bold">Date</TableHead>
-                          <TableHead className="text-right font-bold italic">Start</TableHead>
-                          <TableHead className="text-right font-bold">Provided</TableHead>
-                          <TableHead className="text-right font-bold">Accruals</TableHead>
-                          <TableHead className="text-right font-bold">Liquidated</TableHead>
-                          <TableHead className="text-right font-bold">Reclaimed</TableHead>
-                          <TableHead className="text-right font-bold italic">End</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {collateralLedger.map((entry, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="font-medium">{entry.token}</TableCell>
-                            <TableCell>{entry.item}</TableCell>
-                            <TableCell>{entry.date}</TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.start)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.provided)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.accruals, true)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.liquidated, true)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.reclaimed, true)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatLedgerValue(entry.end)}
-                            </TableCell>
+                  {collateralLedger.length === 0 ? (
+                    <p className="text-center py-12 text-muted-foreground">No collateral activity found</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-b-2">
+                            <TableHead className="font-bold">Token</TableHead>
+                            <TableHead className="font-bold">Item</TableHead>
+                            <TableHead className="font-bold">Date</TableHead>
+                            <TableHead className="text-right font-bold italic">Start</TableHead>
+                            <TableHead className="text-right font-bold">Provided</TableHead>
+                            <TableHead className="text-right font-bold">Accruals</TableHead>
+                            <TableHead className="text-right font-bold">Liquidated</TableHead>
+                            <TableHead className="text-right font-bold">Reclaimed</TableHead>
+                            <TableHead className="text-right font-bold italic">End</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {collateralLedger.map((entry, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{entry.token}</TableCell>
+                              <TableCell>{entry.item}</TableCell>
+                              <TableCell>{entry.date}</TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.start)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.provided)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.accruals, true)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.liquidated, true)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.reclaimed, true)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatLedgerValue(entry.end)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            )}
+            </TabsContent>
 
-            {/* Raw Transaction Table */}
+            {/* Transactions Tab */}
+            <TabsContent value="transactions">
             <Card>
               <CardHeader>
                 <CardTitle>Transaction History</CardTitle>
@@ -534,7 +552,8 @@ export default function ActivityPage() {
                 </div>
               </CardContent>
             </Card>
-          </>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </main>
