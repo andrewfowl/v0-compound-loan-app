@@ -74,9 +74,7 @@ export async function GET(request: NextRequest) {
   try {
     const txResponse = await kryptosFetch<any>("/transactions", {
       method: "POST",
-      body: JSON.stringify({
-        walletAddress: address,
-      }),
+      body: JSON.stringify({ walletAddress: address }),
     })
 
     const rawTxs = Array.isArray(txResponse?.data)
@@ -97,10 +95,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ events })
   } catch (error) {
-    console.error("Kryptos compound activity error:", error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch activity" },
-      { status: 500 }
-    )
+    console.error("[v0] Kryptos compound activity error:", error)
+
+    return NextResponse.json({
+      events: [],
+      upstreamError: error instanceof Error ? error.message : "Unknown Kryptos error",
+    })
   }
 }
