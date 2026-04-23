@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { groupCollateralLedgerByPeriod } from "@/lib/compound/report-builder"
 import { formatLedgerValue } from "@/lib/compound/format"
 import type { CollateralLedgerEntry, Period } from "@/lib/compound/types"
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
 
 interface CollateralTabProps {
   collateralLedger: CollateralLedgerEntry[]
@@ -14,17 +15,26 @@ interface CollateralTabProps {
 
 export function CollateralTab({ collateralLedger }: CollateralTabProps) {
   const [period, setPeriod] = useState<Period>("monthly")
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const grouped = useMemo(
     () => groupCollateralLedgerByPeriod(collateralLedger, period),
     [collateralLedger, period]
   )
 
+  function toggle(label: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      next.has(label) ? next.delete(label) : next.add(label)
+      return next
+    })
+  }
+
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-lg">COLLATERAL</CardTitle>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+        <Select value={period} onValueChange={(v) => { setPeriod(v as Period); setExpanded(new Set()) }}>
           <SelectTrigger className="w-36 h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
@@ -43,6 +53,7 @@ export function CollateralTab({ collateralLedger }: CollateralTabProps) {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2">
+                  <TableHead className="w-6" />
                   <TableHead className="font-bold">Token</TableHead>
                   <TableHead className="font-bold">Item</TableHead>
                   <TableHead className="font-bold">Date</TableHead>
@@ -55,37 +66,69 @@ export function CollateralTab({ collateralLedger }: CollateralTabProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {grouped.map((group) => (
-                  <>
-                    <TableRow key={`h-${group.periodLabel}`} className="bg-muted/60">
-                      <TableCell colSpan={9} className="font-semibold text-sm py-1 px-4">
-                        {group.periodLabel}
-                      </TableCell>
-                    </TableRow>
-                    {group.rows.map((entry, idx) => (
-                      <TableRow key={`${group.periodLabel}-${idx}`}>
-                        <TableCell className="font-medium pl-6">{entry.token}</TableCell>
-                        <TableCell>{entry.item}</TableCell>
-                        <TableCell>{entry.date}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.start, entry.start < 0)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.provided)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.accruals, true)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.liquidated, true)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.reclaimed, true)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatLedgerValue(entry.end, entry.end < 0)}</TableCell>
+                {grouped.map((group) => {
+                  const isOpen = expanded.has(group.periodLabel)
+                  return (
+                    <>
+                      {/* Period header — clickable */}
+                      <TableRow
+                        key={`h-${group.periodLabel}`}
+                        className="bg-muted/60 cursor-pointer hover:bg-muted/80 select-none"
+                        onClick={() => toggle(group.periodLabel)}
+                      >
+                        <TableCell className="pr-0 pl-3">
+                          {isOpen
+                            ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        </TableCell>
+                        <TableCell colSpan={3} className="font-semibold text-sm py-2">
+                          {group.periodLabel}
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            ({group.rows.length} transaction{group.rows.length !== 1 ? "s" : ""})
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">—</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.provided)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.accruals, true)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.liquidated, true)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.reclaimed, true)}</TableCell>
+                        <TableCell className="text-right font-mono">—</TableCell>
                       </TableRow>
-                    ))}
-                    <TableRow key={`s-${group.periodLabel}`} className="border-t-2 font-semibold bg-muted/30">
-                      <TableCell colSpan={3} className="pl-6 text-sm text-muted-foreground">Subtotal</TableCell>
-                      <TableCell className="text-right font-mono">—</TableCell>
-                      <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.provided)}</TableCell>
-                      <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.accruals, true)}</TableCell>
-                      <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.liquidated, true)}</TableCell>
-                      <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.reclaimed, true)}</TableCell>
-                      <TableCell className="text-right font-mono">—</TableCell>
-                    </TableRow>
-                  </>
-                ))}
+
+                      {/* Drill-down rows */}
+                      {isOpen && group.rows.map((entry, idx) => (
+                        <TableRow key={`${group.periodLabel}-${idx}`} className="bg-background hover:bg-muted/20">
+                          <TableCell />
+                          <TableCell className="font-medium pl-6">{entry.token}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{entry.item}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{entry.date}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.start, entry.start < 0)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.provided)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.accruals, true)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.liquidated, true)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.reclaimed, true)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            <span className="inline-flex items-center gap-1">
+                              {formatLedgerValue(entry.end, entry.end < 0)}
+                              {entry.txHash && (
+                                <a
+                                  href={`https://etherscan.io/tx/${entry.txHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-primary opacity-60 hover:opacity-100"
+                                  title={entry.txHash}
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

@@ -90,6 +90,8 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
         liquidated,
         reclaimed,
         end,
+        txHash: e.transactionHash,
+        eventName: e.eventName,
       })
     } else {
       dbtTokens.add(e.asset)
@@ -122,6 +124,8 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
         liquidated,
         payments,
         end,
+        txHash: e.transactionHash,
+        eventName: e.eventName,
       })
     }
   }

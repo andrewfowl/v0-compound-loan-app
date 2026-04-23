@@ -26,6 +26,8 @@ export interface LoanLedgerEntry {
   liquidated: number
   payments: number
   end: number
+  txHash: string
+  eventName: string
 }
 
 export interface CollateralLedgerEntry {
@@ -38,6 +40,8 @@ export interface CollateralLedgerEntry {
   liquidated: number
   reclaimed: number
   end: number
+  txHash: string
+  eventName: string
 }
 
 export interface PeriodGroup<T> {
