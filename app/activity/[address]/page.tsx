@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState, useMemo } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -17,25 +16,33 @@ import {
 } from "@/components/ui/table"
 import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react"
 
+type AccountType = "collateral" | "debt"
+type ActivityType = "deposit" | "redemption" | "borrowing" | "repayment" | "liquidation" | "interest"
+type EventName = "Mint" | "Redeem" | "Borrow" | "RepayBorrow" | "LiquidateBorrow"
+
 interface CompoundEvent {
   id: string
   blockNumber: string
   timestamp: string
   transactionHash: string
-  eventType: "Supply" | "Withdraw" | "Borrow" | "Repay" | "Liquidation"
+  accountType: AccountType
+  activity: ActivityType
+  eventName: EventName
   asset: string
   amount: string
   amountUsd: string
 }
 
+type SummaryData = Record<string, Record<string, number>>
+
 export default function ActivityPage() {
   const params = useParams()
-  const router = useRouter()
   const address = params.address as string
   
   const [events, setEvents] = useState<CompoundEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [source, setSource] = useState("")
 
   const fetchActivity = async () => {
     setLoading(true)
@@ -50,6 +57,7 @@ export default function ActivityPage() {
       }
       
       setEvents(data.events)
+      setSource(data.source || "unknown")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -63,40 +71,70 @@ export default function ActivityPage() {
     }
   }, [address])
 
-  const getEventBadgeVariant = (eventType: string) => {
-    switch (eventType) {
-      case "Supply":
-        return "default"
-      case "Withdraw":
-        return "secondary"
-      case "Borrow":
-        return "outline"
-      case "Repay":
-        return "default"
-      case "Liquidation":
-        return "destructive"
-      default:
-        return "secondary"
+  const { collateralSummary, debtSummary, collateralTokens, debtTokens } = useMemo(() => {
+    const collateral: SummaryData = {
+      deposited: {},
+      redeemed: {},
+      seized: {},
+      "interest income": {},
     }
-  }
+    const debt: SummaryData = {
+      Borrow: {},
+      RepayBorrow: {},
+      "interest expense": {},
+    }
 
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-  }
+    const collTokens = new Set<string>()
+    const dbtTokens = new Set<string>()
+
+    events.forEach((e) => {
+      const amt = parseFloat(e.amountUsd)
+      if (e.accountType === "collateral") {
+        collTokens.add(e.asset)
+        if (e.activity === "deposit") {
+          collateral.deposited[e.asset] = (collateral.deposited[e.asset] || 0) + amt
+        } else if (e.activity === "redemption") {
+          collateral.redeemed[e.asset] = (collateral.redeemed[e.asset] || 0) + amt
+        } else if (e.activity === "liquidation") {
+          collateral.seized[e.asset] = (collateral.seized[e.asset] || 0) + amt
+        }
+      } else {
+        dbtTokens.add(e.asset)
+        if (e.activity === "borrowing") {
+          debt.Borrow[e.asset] = (debt.Borrow[e.asset] || 0) + amt
+        } else if (e.activity === "repayment") {
+          debt.RepayBorrow[e.asset] = (debt.RepayBorrow[e.asset] || 0) + amt
+        }
+      }
+    })
+
+    return {
+      collateralSummary: collateral,
+      debtSummary: debt,
+      collateralTokens: Array.from(collTokens).sort(),
+      debtTokens: Array.from(dbtTokens).sort(),
+    }
+  }, [events])
+
+  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
 
   const formatDate = (timestamp: string) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
+      month: "numeric",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: "numeric",
     })
+  }
+
+  const formatUsd = (value: number, negative = false) => {
+    if (value === 0) return "-"
+    const formatted = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return negative ? `(${formatted})` : formatted
   }
 
   return (
     <main className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/">
@@ -104,7 +142,7 @@ export default function ActivityPage() {
             </Link>
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Compound Activity</h1>
+            <h1 className="text-2xl font-bold">Compound Protocol</h1>
             <p className="text-sm text-muted-foreground font-mono">
               {formatAddress(address)}
               <a
@@ -115,6 +153,7 @@ export default function ActivityPage() {
               >
                 <ExternalLink className="h-3 w-3" />
               </a>
+              {source && <span className="ml-4 text-xs opacity-60">SRC: {source}</span>}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={fetchActivity} disabled={loading}>
@@ -134,113 +173,145 @@ export default function ActivityPage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard
-            title="Total Supply"
-            value={events.filter((e) => e.eventType === "Supply").length.toString()}
-            loading={loading}
-          />
-          <StatCard
-            title="Total Withdrawals"
-            value={events.filter((e) => e.eventType === "Withdraw").length.toString()}
-            loading={loading}
-          />
-          <StatCard
-            title="Total Borrows"
-            value={events.filter((e) => e.eventType === "Borrow").length.toString()}
-            loading={loading}
-          />
-          <StatCard
-            title="Total Repays"
-            value={events.filter((e) => e.eventType === "Repay").length.toString()}
-            loading={loading}
-          />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Transaction History</CardTitle>
-            <CardDescription>
-              All Compound protocol interactions for this address
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : events.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No Compound activity found for this address</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Asset</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">USD Value</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Tx Hash</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {events.map((event) => (
-                      <TableRow key={event.id}>
-                        <TableCell>
-                          <Badge variant={getEventBadgeVariant(event.eventType)}>
-                            {event.eventType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{event.asset}</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {parseFloat(event.amount).toFixed(4)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${parseFloat(event.amountUsd).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(event.timestamp)}
-                        </TableCell>
-                        <TableCell>
-                          <a
-                            href={`https://etherscan.io/tx/${event.transactionHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-mono text-sm text-primary hover:underline inline-flex items-center gap-1"
-                          >
-                            {formatAddress(event.transactionHash)}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </TableCell>
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-96 w-full" />
+          </div>
+        ) : (
+          <>
+            {/* Summary Tables */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Collateral Summary */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b-2">
+                        <TableHead className="font-bold">ACTIVITY</TableHead>
+                        {collateralTokens.map((token) => (
+                          <TableHead key={token} className="text-right font-bold">{token}</TableHead>
+                        ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.entries(collateralSummary).map(([activity, tokens]) => (
+                        <TableRow key={activity}>
+                          <TableCell className="font-medium">{activity}</TableCell>
+                          {collateralTokens.map((token) => (
+                            <TableCell key={token} className="text-right font-mono">
+                              {formatUsd(tokens[token] || 0, activity === "deposited")}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Debt Summary */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-center text-lg border-b pb-2">DEBT</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b-2">
+                        <TableHead className="font-bold">ACTIVITY</TableHead>
+                        {debtTokens.map((token) => (
+                          <TableHead key={token} className="text-right font-bold">{token}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.entries(debtSummary).map(([activity, tokens]) => (
+                        <TableRow key={activity}>
+                          <TableCell className="font-medium">{activity}</TableCell>
+                          {debtTokens.map((token) => (
+                            <TableCell key={token} className="text-right font-mono">
+                              {formatUsd(tokens[token] || 0, activity === "Borrow")}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Raw Transaction Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Transaction History</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b-2">
+                        <TableHead className="font-bold">TX HASH</TableHead>
+                        <TableHead className="font-bold">ACCOUNT</TableHead>
+                        <TableHead className="font-bold">ACTIVITY</TableHead>
+                        <TableHead className="font-bold">TIMESTAMP</TableHead>
+                        <TableHead className="font-bold">EVENT NAME</TableHead>
+                        <TableHead className="font-bold">TOKEN SYMBOL</TableHead>
+                        <TableHead className="text-right font-bold">AMOUNT</TableHead>
+                        <TableHead className="text-right font-bold">AMOUNT USD</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {events.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                            No Compound activity found for this address
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        events.map((event, idx) => (
+                          <TableRow key={event.id}>
+                            <TableCell className="font-mono text-sm">
+                              <a
+                                href={`https://etherscan.io/tx/${event.transactionHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                {formatAddress(event.transactionHash)}
+                              </a>
+                            </TableCell>
+                            <TableCell>
+                              <span className={event.accountType === "collateral" ? "text-green-600" : "text-amber-600"}>
+                                {event.accountType}
+                              </span>
+                            </TableCell>
+                            <TableCell>{event.activity}</TableCell>
+                            <TableCell>{formatDate(event.timestamp)}</TableCell>
+                            <TableCell className="text-blue-600">{event.eventName}</TableCell>
+                            <TableCell className="text-red-600 font-medium">{event.asset}</TableCell>
+                            <TableCell className="text-right font-mono text-green-600">
+                              {parseFloat(event.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {parseFloat(event.amountUsd).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </main>
-  )
-}
-
-function StatCard({ title, value, loading }: { title: string; value: string; loading: boolean }) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <p className="text-sm text-muted-foreground">{title}</p>
-        {loading ? (
-          <Skeleton className="h-8 w-16 mt-1" />
-        ) : (
-          <p className="text-2xl font-bold">{value}</p>
-        )}
-      </CardContent>
-    </Card>
   )
 }
