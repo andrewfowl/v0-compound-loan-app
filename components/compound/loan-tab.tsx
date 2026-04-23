@@ -102,14 +102,14 @@ export function LoanTab({ loanLedger }: LoanTabProps) {
                           <TableCell className="font-medium pl-6">{entry.token}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">{entry.item}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">{entry.date}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.start, entry.start < 0)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.proceeds, true)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.accruals, true)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.liquidated)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.payments)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.start, entry.start < 0, entry.token)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.proceeds, true, entry.token)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.accruals, true, entry.token)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.liquidated, false, entry.token)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.payments, false, entry.token)}</TableCell>
                           <TableCell className="text-right font-mono text-sm">
                             <span className="inline-flex items-center gap-1">
-                              {formatLedgerValue(entry.end, entry.end < 0)}
+                              {formatLedgerValue(entry.end, entry.end < 0, entry.token)}
                               {entry.txHash && (
                                 <a
                                   href={`https://etherscan.io/tx/${entry.txHash}`}

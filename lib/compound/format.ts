@@ -7,18 +7,29 @@ export function formatUsd(value: number, isDebit = false): string {
   return isDebit ? `(${formatted})` : formatted
 }
 
+// Stablecoins that should show 2 decimal places max; others (ETH, WBTC…) show up to 8
+const STABLECOINS = new Set(["USDC", "USDT", "DAI", "BUSD", "FRAX", "LUSD", "GUSD"])
+
+function decimalsForToken(token?: string): number {
+  return token && STABLECOINS.has(token.toUpperCase()) ? 2 : 8
+}
+
 // Crypto token amounts: strip trailing zeros, no currency symbol, zero = "-"
-export function formatCrypto(value: number, isDebit = false): string {
+// Always use Math.abs — sign is conveyed by isDebit / parentheses
+export function formatCrypto(value: number, isDebit = false, token?: string): string {
   if (value === 0) return "-"
-  const formatted = value
-    .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+  const abs = Math.abs(value)
+  const maxDecimals = decimalsForToken(token)
+  const formatted = abs
+    .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: maxDecimals })
     .replace(/\.?0+$/, "")
-  return isDebit ? `(${formatted})` : formatted
+  const withSymbol = token ? `${formatted} ${token}` : formatted
+  return isDebit ? `(${withSymbol})` : withSymbol
 }
 
 // Ledger cells use crypto formatting (token quantities, not USD)
-export function formatLedgerValue(value: number, isDebit = false): string {
-  return formatCrypto(value, isDebit)
+export function formatLedgerValue(value: number, isDebit = false, token?: string): string {
+  return formatCrypto(value, isDebit, token)
 }
 
 export function formatAddress(addr: string): string {
