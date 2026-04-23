@@ -27,7 +27,7 @@ export function formatAddress(addr: string): string {
 
 export function formatDate(timestamp: string): string {
   return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "numeric",
+    month: "short",
     day: "numeric",
     year: "numeric",
   })
