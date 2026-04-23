@@ -100,18 +100,19 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
 
       if (e.activity === "borrowing") {
         debtSummary.Borrow[e.asset] = (debtSummary.Borrow[e.asset] ?? 0) + amtUsd
-        proceeds = amt
+        proceeds = amt   // positive column value; balance effect is negative (liability grows)
       } else if (e.activity === "repayment") {
         debtSummary.RepayBorrow[e.asset] = (debtSummary.RepayBorrow[e.asset] ?? 0) + amtUsd
-        payments = amt
+        payments = amt   // positive column value; balance effect is positive (liability shrinks)
       } else if (e.activity === "liquidation") {
-        liquidated = amt
+        liquidated = amt // positive column value; balance effect is positive (liability shrinks)
       } else if (e.activity === "interest") {
         debtSummary["interest expense"][e.asset] = (debtSummary["interest expense"][e.asset] ?? 0) + amtUsd
-        accruals = amt
+        accruals = amt   // positive column value; balance effect is negative (liability grows)
       }
 
-      const end = start + proceeds + accruals - liquidated - payments
+      // Loan balance is negative (liability). Borrows/accruals deepen it; payments/liquidations reduce it.
+      const end = start - proceeds - accruals + liquidated + payments
       loanBalances[e.asset] = end
 
       loanLedger.push({
