@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatAddress, formatDate } from "@/lib/compound/format"
+import { formatAddress, formatDate, formatUsd, formatCrypto } from "@/lib/compound/format"
 import type { CompoundEvent } from "@/lib/compound/types"
 
 interface TransactionsTabProps {
@@ -57,11 +57,11 @@ export function TransactionsTab({ events }: TransactionsTabProps) {
                     <TableCell>{formatDate(event.timestamp)}</TableCell>
                     <TableCell className="text-blue-600">{event.eventName}</TableCell>
                     <TableCell className="text-red-600 font-medium">{event.asset}</TableCell>
-                    <TableCell className="text-right font-mono text-green-600">
-                      {parseFloat(event.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    <TableCell className="text-right font-mono">
+                      {formatCrypto(parseFloat(event.amount))}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {parseFloat(event.amountUsd).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {formatUsd(parseFloat(event.amountUsd))}
                     </TableCell>
                   </TableRow>
                 ))

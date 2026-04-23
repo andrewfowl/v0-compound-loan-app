@@ -1,21 +1,24 @@
 import type { Period } from "./types"
 
-export function formatLedgerValue(value: number, isDebit = false): string {
-  if (value === 0) return ""
-  const formatted = value
-    .toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 2 })
-    .replace(/0+$/, "")
-    .replace(/\.$/, "")
+// USD amounts: always 2 decimal places, with "$" prefix, zero = "-"
+export function formatUsd(value: number, isDebit = false): string {
+  if (value === 0) return "-"
+  const formatted = "$" + value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return isDebit ? `(${formatted})` : formatted
 }
 
-export function formatUsd(value: number, negative = false): string {
-  if (value === 0) return ""
+// Crypto token amounts: strip trailing zeros, no currency symbol, zero = "-"
+export function formatCrypto(value: number, isDebit = false): string {
+  if (value === 0) return "-"
   const formatted = value
-    .toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 2 })
-    .replace(/0+$/, "")
-    .replace(/\.$/, "")
-  return negative ? `(${formatted})` : formatted
+    .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+    .replace(/\.?0+$/, "")
+  return isDebit ? `(${formatted})` : formatted
+}
+
+// Ledger cells use crypto formatting (token quantities, not USD)
+export function formatLedgerValue(value: number, isDebit = false): string {
+  return formatCrypto(value, isDebit)
 }
 
 export function formatAddress(addr: string): string {
