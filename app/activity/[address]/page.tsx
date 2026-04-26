@@ -1,21 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { CompoundReportView } from "@/components/compound-report-view";
 
 type JobStatus = {
   jobId: string;
@@ -29,9 +21,6 @@ type JobStatus = {
   error?: { code?: string; message?: string } | null;
 };
 
-type ReconciliationSummaryRow = Record<string, unknown>;
-type NormalizedEventRow = Record<string, unknown>;
-
 type ReportPayload = {
   metadata?: Record<string, unknown>;
   notes?: string[];
@@ -39,22 +28,14 @@ type ReportPayload = {
     periodLabel?: string;
     monthStart?: Record<string, unknown>;
     monthEnd?: Record<string, unknown>;
-    normalizedEvents?: NormalizedEventRow[];
+    normalizedEvents?: Record<string, unknown>[];
     reconciliationRows?: Record<string, unknown>[];
-    reconciliationSummary?: ReconciliationSummaryRow[];
+    reconciliationSummary?: Record<string, unknown>[];
   };
 };
 
 function formatAddress(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-function formatValue(value: unknown) {
-  if (value == null) return "—";
-  if (typeof value === "number") return value.toLocaleString("en-US");
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
 }
 
 function extractReportPayload(input: unknown): ReportPayload | null {
@@ -167,35 +148,6 @@ export default function ActivityPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.status, walletId, period, report]);
 
-  const periodData = report?.period ?? null;
-
-  const overviewRows = useMemo(() => {
-    const unifiedEnd =
-      (periodData?.monthEnd as Record<string, unknown>)?.unifiedSummary ||
-      (periodData?.monthEnd as Record<string, unknown>)?.summary ||
-      null;
-
-    if (!unifiedEnd || typeof unifiedEnd !== "object") return [];
-
-    return Object.entries(unifiedEnd as Record<string, unknown>).map(([key, value]) => ({ key, value }));
-  }, [periodData]);
-
-  const reconciliationSummary = Array.isArray(periodData?.reconciliationSummary)
-    ? periodData?.reconciliationSummary
-    : [];
-
-  const normalizedEvents = Array.isArray(periodData?.normalizedEvents)
-    ? periodData?.normalizedEvents
-    : [];
-
-  const summaryColumns = reconciliationSummary.length
-    ? Object.keys(reconciliationSummary[0])
-    : [];
-
-  const eventColumns = normalizedEvents.length
-    ? Object.keys(normalizedEvents[0]).slice(0, 10)
-    : [];
-
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -281,137 +233,7 @@ export default function ActivityPage() {
           ) : null}
 
           {job?.status === "completed" ? (
-            <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
-                <TabsTrigger value="events">Events</TabsTrigger>
-                <TabsTrigger value="raw">Raw JSON</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Period overview</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingReport ? (
-                      <Skeleton className="h-40 w-full" />
-                    ) : overviewRows.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No overview data returned yet.
-                      </p>
-                    ) : (
-                      <div className="grid gap-4 md:grid-cols-3">
-                        {overviewRows.map((row) => (
-                          <div key={row.key} className="rounded-lg border p-4">
-                            <div className="text-xs uppercase text-muted-foreground">
-                              {row.key}
-                            </div>
-                            <div className="mt-1 text-lg font-semibold">
-                              {formatValue(row.value)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="reconciliation">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Reconciliation summary</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingReport ? (
-                      <Skeleton className="h-40 w-full" />
-                    ) : reconciliationSummary.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No reconciliation summary returned yet.
-                      </p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {summaryColumns.map((col) => (
-                                <TableHead key={col}>{col}</TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {reconciliationSummary.map((row, idx) => (
-                              <TableRow key={idx}>
-                                {summaryColumns.map((col) => (
-                                  <TableCell key={col}>
-                                    {formatValue((row as Record<string, unknown>)[col])}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="events">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Normalized events</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingReport ? (
-                      <Skeleton className="h-40 w-full" />
-                    ) : normalizedEvents.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No normalized events returned yet.
-                      </p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {eventColumns.map((col) => (
-                                <TableHead key={col}>{col}</TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {normalizedEvents.slice(0, 100).map((row, idx) => (
-                              <TableRow key={idx}>
-                                {eventColumns.map((col) => (
-                                  <TableCell key={col}>
-                                    {formatValue((row as Record<string, unknown>)[col])}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="raw">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Raw report payload</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="max-h-[700px] overflow-auto rounded-lg bg-muted p-4 text-xs">
-                      {JSON.stringify(report, null, 2)}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <CompoundReportView report={report} loading={loadingReport} />
           ) : (
             <Card>
               <CardContent className="py-8">
