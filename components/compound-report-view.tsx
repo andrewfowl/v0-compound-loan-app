@@ -1,13 +1,3 @@
-Replace components/compound-report-view.tsx with this version.
-
-It keeps the legacy views, but adds a more Excel-like report pack with:
-
-section headers
-beginning vs ending tables
-dedicated loan / collateral / funding roll-forwards
-detailed ledger rows
-subtotal-style grouping by protocol, market, and token
-unresolved variance highlighting
 "use client";
 
 import { useMemo } from "react";
