@@ -14,6 +14,7 @@ import { SummaryTab } from "@/components/compound/summary-tab"
 import { LoanTab } from "@/components/compound/loan-tab"
 import { CollateralTab } from "@/components/compound/collateral-tab"
 import { TransactionsTab } from "@/components/compound/transactions-tab"
+import { JournalEntriesTab } from "@/components/compound/journal-entries-tab"
 import type { CompoundEvent } from "@/lib/compound/types"
 
 export default function ActivityPage() {
@@ -92,11 +93,12 @@ export default function ActivityPage() {
           </div>
         ) : (
           <Tabs defaultValue="summary" className="w-full">
-            <TabsList className="grid w-full max-w-lg grid-cols-4 mb-6">
+            <TabsList className="grid w-full max-w-2xl grid-cols-5 mb-6">
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="loan">Loan</TabsTrigger>
               <TabsTrigger value="collateral">Collateral</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
+              <TabsTrigger value="journal">JE</TabsTrigger>
             </TabsList>
 
             <TabsContent value="summary" className="space-y-6">
@@ -109,15 +111,25 @@ export default function ActivityPage() {
             </TabsContent>
 
             <TabsContent value="loan">
-              <LoanTab loanLedger={report.loanLedger} />
+              <LoanTab
+                loanLedger={report.loanLedger}
+                positions={report.borrowerRecon.positions}
+              />
             </TabsContent>
 
             <TabsContent value="collateral">
-              <CollateralTab collateralLedger={report.collateralLedger} />
+              <CollateralTab
+                collateralLedger={report.collateralLedger}
+                borrowerRecon={report.borrowerRecon}
+              />
             </TabsContent>
 
             <TabsContent value="transactions">
               <TransactionsTab events={events} />
+            </TabsContent>
+
+            <TabsContent value="journal" className="space-y-6">
+              <JournalEntriesTab borrowerRecon={report.borrowerRecon} />
             </TabsContent>
           </Tabs>
         )}
