@@ -111,13 +111,21 @@ export default function ActivityPage() {
     }
   };
 
-  useEffect(() => {
-    fetchJob();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId]);
+  // If no jobId but we have walletId and period, load report directly
+  const directView = !jobId && walletId && period;
 
   useEffect(() => {
-    if (!jobId) return;
+    if (directView) {
+      setLoadingJob(false);
+      fetchReport();
+    } else {
+      fetchJob();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, walletId, period]);
+
+  useEffect(() => {
+    if (!jobId || directView) return;
 
     const timer = setInterval(async () => {
       try {
@@ -139,7 +147,7 @@ export default function ActivityPage() {
     }, 3000);
 
     return () => clearInterval(timer);
-  }, [jobId]);
+  }, [jobId, directView]);
 
   useEffect(() => {
     if (job?.status === "completed" && walletId && period && !report) {
@@ -171,7 +179,15 @@ export default function ActivityPage() {
         </Button>
       </div>
 
-      {!jobId ? (
+      {error ? (
+        <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {directView ? (
+        <CompoundReportView report={report} loading={loadingReport} />
+      ) : !jobId ? (
         <Card>
           <CardContent className="py-8">
             <p className="text-sm text-muted-foreground">
@@ -225,12 +241,6 @@ export default function ActivityPage() {
               ) : null}
             </CardContent>
           </Card>
-
-          {error ? (
-            <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
 
           {job?.status === "completed" ? (
             <CompoundReportView report={report} loading={loadingReport} />
