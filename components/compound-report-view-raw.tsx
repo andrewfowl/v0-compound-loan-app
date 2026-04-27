@@ -49,6 +49,20 @@ function formatValue(val: unknown): string {
   return String(val);
 }
 
+/**
+ * Convert value to number, handling strings and BigInt
+ */
+function toNumeric(val: unknown): number {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof val === "bigint") return Number(val);
+  return 0;
+}
+
 function formatUsd(val: unknown): string {
   const num = Number(val);
   if (isNaN(num)) return "-";
@@ -196,7 +210,7 @@ export function CompoundReportViewRaw({ report }: Props) {
         </Card>
       </TabsContent>
 
-      {/* Reconciliation Tab - Dynamic fields based on actual data */}
+      {/* Reconciliation Tab - Dynamic fields with verification */}
       <TabsContent value="reconciliation">
         <Card className="bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -211,37 +225,76 @@ export function CompoundReportViewRaw({ report }: Props) {
               </SelectContent>
             </Select>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
+          <CardContent className="space-y-4">
             {reconciliationRows.length === 0 ? (
               <p className="text-muted-foreground">No reconciliation data found.</p>
             ) : (
               <>
-                {/* Show all field names from the first row for debugging */}
-                <div className="mb-4 p-3 bg-muted/30 rounded text-xs">
-                  <strong>Available fields:</strong> {Object.keys(reconciliationRows[0]).join(", ")}
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {Object.keys(reconciliationRows[0]).map((key) => (
-                        <TableHead key={key} className="text-xs uppercase">
-                          {key}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reconciliationRows.map((row, idx) => (
-                      <TableRow key={idx}>
-                        {Object.entries(row).map(([key, value], cellIdx) => (
-                          <TableCell key={cellIdx} className="font-mono text-xs">
-                            {formatValue(value)}
-                          </TableCell>
-                        ))}
-                      </TableRow>
+                {/* Show all field names */}
+                <div className="p-3 bg-muted/30 rounded text-xs">
+                  <strong>Available fields:</strong> 
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {Object.keys(reconciliationRows[0]).map((key) => (
+                      <div key={key} className="font-mono text-xs">{key}</div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </div>
+
+                {/* Reconciliation formula explanation */}
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded text-xs">
+                  <strong>Formula:</strong> End Balance = Start + Proceeds + Accruals - Liquidated - Repayments
+                </div>
+
+                {/* Data table */}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {Object.keys(reconciliationRows[0]).map((key) => (
+                          <TableHead key={key} className="text-xs uppercase">
+                            {key}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-xs uppercase bg-amber-500/10">Calculated End</TableHead>
+                        <TableHead className="text-xs uppercase bg-amber-500/10">Actual End</TableHead>
+                        <TableHead className="text-xs uppercase bg-amber-500/10">Variance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reconciliationRows.map((row, idx) => {
+                        // Try to find the numeric fields
+                        const start = toNumeric(row.startBalance ?? row.start ?? row.opening_balance ?? 0);
+                        const proceeds = toNumeric(row.proceeds ?? row.deposits ?? row.provided ?? 0);
+                        const accruals = toNumeric(row.accruals ?? row.interest ?? row.interest_accrued ?? 0);
+                        const liquidated = toNumeric(row.liquidated ?? row.liquidation ?? 0);
+                        const repayments = toNumeric(row.repayments ?? row.payments ?? row.paid ?? 0);
+                        const actualEnd = toNumeric(row.endBalance ?? row.end ?? row.closing_balance ?? 0);
+                        
+                        const calculatedEnd = start + proceeds + accruals - liquidated - repayments;
+                        const variance = actualEnd - calculatedEnd;
+                        
+                        return (
+                          <TableRow key={idx}>
+                            {Object.entries(row).map(([key, value], cellIdx) => (
+                              <TableCell key={cellIdx} className="font-mono text-xs">
+                                {formatValue(value)}
+                              </TableCell>
+                            ))}
+                            <TableCell className="font-mono text-xs bg-amber-500/5">
+                              {formatValue(calculatedEnd)}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs bg-amber-500/5">
+                              {formatValue(actualEnd)}
+                            </TableCell>
+                            <TableCell className={`font-mono text-xs bg-amber-500/5 ${variance === 0 ? 'text-green-600' : 'text-red-600 font-bold'}`}>
+                              {formatValue(variance)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </>
             )}
           </CardContent>
