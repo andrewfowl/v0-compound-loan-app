@@ -938,6 +938,3 @@ export function CompoundReportView({ report, loading = false }: Props) {
     </Tabs>
   );
 }
-period.reconciliationRows
-
-So you can compare both before deciding what to keep.
