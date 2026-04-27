@@ -184,7 +184,7 @@ function transformToLoanLedger(rows: GenericRow[]): LoanLedgerEntry[] {
 }
 
 export function CompoundReportView({ report, loading = false }: Props) {
-  const [viewMode, setViewMode] = useState<"calculated" | "raw">("calculated");
+  const [viewMode, setViewMode] = useState<"calculated" | "raw" | "mapping">("calculated");
   const period = report?.period ?? null;
 
   const normalizedEvents = useMemo(
@@ -266,10 +266,124 @@ export function CompoundReportView({ report, loading = false }: Props) {
         >
           Raw API Data
         </Button>
+        <Button
+          variant={viewMode === "mapping" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setViewMode("mapping" as typeof viewMode)}
+        >
+          Data Mapping
+        </Button>
       </div>
 
       {/* Raw API Data View */}
       {viewMode === "raw" && <CompoundReportViewRaw report={report} />}
+
+      {/* Data Mapping Debug View */}
+      {viewMode === "mapping" && (
+        <Card>
+          <CardContent className="py-6 space-y-6 text-sm">
+            <div>
+              <h3 className="font-semibold mb-2">Data Sources Available</h3>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>normalizedEvents: {normalizedEvents.length} rows</li>
+                <li>reconciliationRows: {reconciliationRows.length} rows</li>
+                <li>Using backend ledger: {hasBackendLedger ? "Yes" : "No (falling back to calculated)"}</li>
+              </ul>
+            </div>
+
+            {normalizedEvents.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2">normalizedEvents Field Names (first row)</h3>
+                <div className="bg-muted/30 p-3 rounded text-xs font-mono overflow-x-auto">
+                  {Object.keys(normalizedEvents[0]).join(", ")}
+                </div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-muted-foreground">Show first event</summary>
+                  <pre className="bg-muted/30 p-3 rounded text-xs overflow-x-auto mt-1">
+                    {JSON.stringify(normalizedEvents[0], null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )}
+
+            {reconciliationRows.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2">reconciliationRows Field Names (first row)</h3>
+                <div className="bg-muted/30 p-3 rounded text-xs font-mono overflow-x-auto">
+                  {Object.keys(reconciliationRows[0]).join(", ")}
+                </div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-muted-foreground">Show first row</summary>
+                  <pre className="bg-muted/30 p-3 rounded text-xs overflow-x-auto mt-1">
+                    {JSON.stringify(reconciliationRows[0], null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-semibold mb-2">Expected Field Mappings</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-xs font-medium mb-1">Collateral Ledger</h4>
+                  <table className="text-xs w-full">
+                    <thead><tr className="border-b"><th className="text-left py-1">Column</th><th className="text-left py-1">Fields Tried</th></tr></thead>
+                    <tbody>
+                      <tr><td>Token</td><td className="font-mono">tokenSymbol, token_symbol, token</td></tr>
+                      <tr><td>Start</td><td className="font-mono">startBalance, start</td></tr>
+                      <tr><td>Provided</td><td className="font-mono">provided, deposits, amount</td></tr>
+                      <tr><td>Accruals</td><td className="font-mono">accruals, interest</td></tr>
+                      <tr><td>Liquidated</td><td className="font-mono">liquidated</td></tr>
+                      <tr><td>Reclaimed</td><td className="font-mono">reclaimed, withdrawals</td></tr>
+                      <tr><td>End</td><td className="font-mono">endBalance, end</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <h4 className="text-xs font-medium mb-1">Loan Ledger</h4>
+                  <table className="text-xs w-full">
+                    <thead><tr className="border-b"><th className="text-left py-1">Column</th><th className="text-left py-1">Fields Tried</th></tr></thead>
+                    <tbody>
+                      <tr><td>Token</td><td className="font-mono">tokenSymbol, token_symbol, token</td></tr>
+                      <tr><td>Start</td><td className="font-mono">startBalance, start</td></tr>
+                      <tr><td>Proceeds</td><td className="font-mono">proceeds, borrows, amount</td></tr>
+                      <tr><td>Accruals</td><td className="font-mono">accruals, interest</td></tr>
+                      <tr><td>Liquidated</td><td className="font-mono">liquidated</td></tr>
+                      <tr><td>Payments</td><td className="font-mono">payments, repayments</td></tr>
+                      <tr><td>End</td><td className="font-mono">endBalance, end</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Transactions Tab Mapping</h3>
+              <table className="text-xs w-full">
+                <thead><tr className="border-b"><th className="text-left py-1">Column</th><th className="text-left py-1">Fields Tried</th><th className="text-left py-1">Detection Logic</th></tr></thead>
+                <tbody>
+                  <tr><td>TX HASH</td><td className="font-mono">txHash, tx_hash</td><td>-</td></tr>
+                  <tr><td>ACCOUNT</td><td className="font-mono">positionType, position_type</td><td>"collateral" or "debt"</td></tr>
+                  <tr><td>ACTIVITY</td><td className="font-mono">activityType, activity_type, sourceAction</td><td>deposit/redeem/borrow/repay/liquidate</td></tr>
+                  <tr><td>EVENT NAME</td><td>Derived</td><td>deposit→Mint, borrow→Borrow, liquidation→LiquidateBorrow</td></tr>
+                  <tr><td>TOKEN</td><td className="font-mono">tokenSymbol, token_symbol</td><td>-</td></tr>
+                  <tr><td>AMOUNT</td><td className="font-mono">amount, amount_token</td><td>-</td></tr>
+                  <tr><td>AMOUNT USD</td><td className="font-mono">amountUsd, amount_usd</td><td>-</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded">
+              <h4 className="font-semibold text-amber-700 dark:text-amber-400 mb-1">JE Tab Note</h4>
+              <p className="text-xs text-muted-foreground">
+                JE entries are calculated from normalizedEvents using hardcoded asset prices 
+                (WETH=$3200, WBTC=$65000, etc.) and simulated monthly volatility for Fair Value adjustments. 
+                These are NOT from actual on-chain USD values if the backend doesn&apos;t provide amountUsd.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Calculated Report View */}
       {viewMode === "calculated" && normalizedEvents.length === 0 && reconciliationRows.length === 0 && (
