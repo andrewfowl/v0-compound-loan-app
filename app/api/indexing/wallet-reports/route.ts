@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const data = await getWalletReports(address, period || undefined);
+    const userId = url.searchParams.get("userId")?.trim() || undefined;
+    const data = await getWalletReports(address, period || undefined, userId);
 
     return NextResponse.json(data, {
       status: 200,
