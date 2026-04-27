@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { kryptosFetch } from "@/lib/kryptos"
+// import { kryptosFetch } from "@/lib/kryptos"
 import type { AccountType, ActivityType, EventName, CompoundEvent } from "@/lib/compound/types"
 
 const USE_KRYPTOS = process.env.KRYPTOS_ENABLED === "true"
