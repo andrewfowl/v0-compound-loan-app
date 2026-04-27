@@ -87,16 +87,18 @@ export default function ActivityPage() {
   };
 
   const fetchReport = async () => {
-    if (!walletId || !period) return;
+    if (!period) return;
 
     setLoadingReport(true);
     setError("");
 
     try {
-      const res = await fetch(
-        `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`,
-        { cache: "no-store" }
-      );
+      // Use walletId-based endpoint if available (from job flow), otherwise use address-based endpoint
+      const endpoint = walletId
+        ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`
+        : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}`;
+
+      const res = await fetch(endpoint, { cache: "no-store" });
       const data = await res.json();
 
       if (!res.ok) {
@@ -111,8 +113,8 @@ export default function ActivityPage() {
     }
   };
 
-  // If no jobId but we have walletId and period, load report directly
-  const directView = !jobId && walletId && period;
+  // If no jobId but we have period (and address from URL), load report directly
+  const directView = !jobId && period;
 
   useEffect(() => {
     if (directView) {
@@ -150,11 +152,11 @@ export default function ActivityPage() {
   }, [jobId, directView]);
 
   useEffect(() => {
-    if (job?.status === "completed" && walletId && period && !report) {
+    if (job?.status === "completed" && period && !report) {
       fetchReport();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.status, walletId, period, report]);
+  }, [job?.status, period, report]);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">

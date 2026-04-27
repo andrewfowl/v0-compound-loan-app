@@ -90,3 +90,24 @@ export async function listWallets() {
     method: "GET",
   });
 }
+
+/**
+ * Get all indexed wallets for the current user with available periods
+ */
+export async function getWalletCatalog(address?: string) {
+  const path = address
+    ? `/api/wallet-catalog?address=${encodeURIComponent(address)}`
+    : "/api/wallet-catalog";
+  return backendFetch(path, { method: "GET" });
+}
+
+/**
+ * Get saved reports for a wallet by address, optionally filtered by period
+ */
+export async function getWalletReports(address: string, period?: string) {
+  const qs = new URLSearchParams({ address });
+  if (period) {
+    qs.set("period", period);
+  }
+  return backendFetch(`/api/wallet-reports?${qs.toString()}`, { method: "GET" });
+}
