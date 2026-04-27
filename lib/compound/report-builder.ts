@@ -15,20 +15,8 @@ import type {
 } from "./types"
 import { getPeriodKey, getPeriodLabel, formatDate } from "./format"
 
-// Fair Value adjustment constants - these are estimates for market-to-market adjustments
-// These represent estimated volatility and are NOT hardcoded prices
-const ASSET_MONTHLY_VOLATILITY: Record<string, number> = {
-  WETH: 0.08, // 8% estimated monthly volatility
-  WBTC: 0.10, // 10% estimated monthly volatility
-  USDC: 0.001, // Stablecoin, minimal volatility
-  USDT: 0.001,
-  DAI: 0.001,
-  COMP: 0.15,
-}
-
-function getMonthlyVolatility(asset: string): number {
-  return ASSET_MONTHLY_VOLATILITY[asset] ?? 0.05 // Default 5% volatility
-}
+/** User-supplied principal-market prices keyed by token symbol */
+export type PriceOverrides = Record<string, number>
 const LIQUIDATION_THRESHOLD = 0.80
 const SAFE_TARGET = 0.65
 const MONITOR_THRESHOLD = 0.50
@@ -63,12 +51,16 @@ function computeRiskLevel(debtUsd: number, collateralUsd: number): RiskLevel {
 
 /**
  * Build a CompoundReport from normalized events.
- * 
- * IMPORTANT: This function uses the amountUsd field directly from the events.
- * If amountUsd is 0 or missing, the USD values in reports will be incorrect.
- * The backend should provide accurate USD values; we do NOT apply hardcoded prices.
+ *
+ * priceOverrides: user-supplied prices from their principal market.
+ * Used to compute Fair Value (mark-to-market) adjustments in the JE tab:
+ *   FV Adj = endBalance (tokens) × (userPrice − impliedOnChainPrice)
+ * impliedOnChainPrice per event = amountUsd ÷ amount.
  */
-export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
+export function buildCompoundReport(
+  events: CompoundEvent[],
+  priceOverrides: PriceOverrides = {}
+): CompoundReport {
   const collateralSummary: Record<string, Record<string, number>> = {
     deposited: {},
     redeemed: {},
@@ -189,7 +181,7 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
   }
 
   // Build borrower reconciliation with journal entries
-  const borrowerRecon = buildBorrowerRecon(events, loanBalances, collateralBalances, runningDebtUsd, runningCollateralUsd)
+  const borrowerRecon = buildBorrowerRecon(events, loanBalances, collateralBalances, runningDebtUsd, runningCollateralUsd, priceOverrides)
 
   return {
     collateralSummary,
@@ -207,7 +199,8 @@ function buildBorrowerRecon(
   debtUnits: Record<string, number>,
   collateralUnits: Record<string, number>,
   finalDebtUsd: number,
-  finalCollateralUsd: number
+  finalCollateralUsd: number,
+  priceOverrides: PriceOverrides = {}
 ): BorrowerRecon {
   const monthlyGroups: MonthlyReconGroup[] = []
   
@@ -346,43 +339,55 @@ function buildBorrowerRecon(
       }
     }
 
-    // Add Fair Value adjustment entries (market-to-market for unrealized gains/losses)
-    // These are ESTIMATED based on monthly volatility, NOT hardcoded prices
+    // Fair Value (mark-to-market) adjustments using user-supplied principal market prices.
+    // Formula per asset:
+    //   impliedPrice  = amountUsd / amount  (price embedded in the on-chain event)
+    //   endTokens     = running balance in tokens at month-end
+    //   fvAdj         = endTokens × (userPrice − impliedPrice)
+    // Positive = unrealized gain (user price > on-chain price), Negative = loss.
     let totalFvAdjustment = 0
+    const fvByAsset: Record<string, { tokens: number; impliedPrice: number }> = {}
+
+    // Accumulate end-of-month token balances and last implied price per asset
     for (const e of monthEvents) {
-      if (e.accountType === "debt") {
-        const vol = getMonthlyVolatility(e.asset)
-        const fvAdjustment = (parseFloat(e.amountUsd) || 0) * vol * (Math.random() - 0.5) * 2
-        if (Math.abs(fvAdjustment) > 0.01) {
-          totalFvAdjustment += fvAdjustment
-          entries.push({
-            date: `${date} (FV)`,
-            timestamp: e.timestamp,
-            description: `Fair Value Adjustment – ${e.asset} (estimated monthly volatility)`,
-            debitAccount: fvAdjustment > 0 ? "Unrealized Gain on Borrowings" : "Unrealized Loss on Borrowings",
-            creditAccount: fvAdjustment > 0 ? "Unrealized Gain on Borrowings" : "Unrealized Loss on Borrowings",
-            usdAmount: Math.abs(fvAdjustment),
-            asset: e.asset,
-            computed: true,
-          })
-        }
+      const amt = parseFloat(e.amount) || 0
+      const amtUsd = parseFloat(e.amountUsd) || 0
+      const impliedPrice = amt > 0 ? amtUsd / amt : 0
+      if (!fvByAsset[e.asset]) fvByAsset[e.asset] = { tokens: 0, impliedPrice }
+      // Update with latest implied price when available
+      if (impliedPrice > 0) fvByAsset[e.asset].impliedPrice = impliedPrice
+      if (e.activity === "deposit" || e.activity === "borrowing" || e.activity === "interest") {
+        fvByAsset[e.asset].tokens += amt
       } else {
-        const vol = getMonthlyVolatility(e.asset)
-        const fvAdjustment = (parseFloat(e.amountUsd) || 0) * vol * (Math.random() - 0.5) * 2
-        if (Math.abs(fvAdjustment) > 0.01) {
-          totalFvAdjustment += fvAdjustment
-          entries.push({
-            date: `${date} (FV)`,
-            timestamp: e.timestamp,
-            description: `Fair Value Adjustment – ${e.asset} (estimated monthly volatility)`,
-            debitAccount: fvAdjustment > 0 ? "Unrealized Gain on Collateral" : "Unrealized Loss on Collateral",
-            creditAccount: fvAdjustment > 0 ? "Unrealized Gain on Collateral" : "Unrealized Loss on Collateral",
-            usdAmount: Math.abs(fvAdjustment),
-            asset: e.asset,
-            computed: true,
-          })
-        }
+        fvByAsset[e.asset].tokens -= amt
       }
+    }
+
+    // One FV entry per asset that has a user price override
+    const fvDate = `${y}-${String(m).padStart(2, "0")}-30`
+    for (const [asset, { tokens, impliedPrice }] of Object.entries(fvByAsset)) {
+      const userPrice = priceOverrides[asset]
+      if (userPrice == null || Math.abs(tokens) < 0.0001) continue
+      const fvAdj = tokens * (userPrice - impliedPrice)
+      if (Math.abs(fvAdj) < 0.01) continue
+
+      const isGain = fvAdj > 0
+      totalFvAdjustment += fvAdj
+
+      entries.push({
+        date: fvDate,
+        timestamp: new Date(y, m - 1, 30).toISOString(),
+        description: `FV Adj – ${asset} (user $${userPrice.toLocaleString()} vs implied $${impliedPrice.toFixed(2)})`,
+        debitAccount: isGain
+          ? `Unrealized FV Gain – ${asset}`
+          : `Unrealized FV Loss – ${asset}`,
+        creditAccount: isGain
+          ? `FV Reserve – ${asset}`
+          : `FV Reserve – ${asset}`,
+        usdAmount: Math.abs(fvAdj),
+        asset,
+        computed: true,
+      })
     }
 
     if (entries.length > 0 || openingDebt > 0) {

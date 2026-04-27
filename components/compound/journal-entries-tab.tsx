@@ -335,9 +335,10 @@ export function JournalEntriesTab({ borrowerRecon }: JournalEntriesTabProps) {
                               </span>
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-sm">
-                            Fair Value Adjustment: Estimated change in value of crypto borrowings due to price volatility. 
-                            This is a computed entry based on simulated monthly price movements.
+                          <TooltipContent className="max-w-sm text-xs">
+                            <p className="font-semibold mb-1">Fair Value Adjustment (MTM)</p>
+                            <p>Formula: End Balance (tokens) × (Your Price − Implied On-Chain Price)</p>
+                            <p className="mt-1 text-muted-foreground">Set prices in the &quot;Principal Market Prices&quot; panel at the top of this tab.</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

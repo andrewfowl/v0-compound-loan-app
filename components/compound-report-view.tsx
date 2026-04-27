@@ -11,6 +11,7 @@ import { CollateralTab } from "@/components/compound/collateral-tab";
 import { TransactionsTab } from "@/components/compound/transactions-tab";
 import { JournalEntriesTab } from "@/components/compound/journal-entries-tab";
 import { CompoundReportViewRaw } from "@/components/compound-report-view-raw";
+import { PriceOverridesPanel } from "@/components/compound/price-overrides-panel";
 import { buildCompoundReport } from "@/lib/compound/report-builder";
 import type {
   CompoundEvent,
@@ -19,6 +20,7 @@ import type {
   LoanLedgerEntry,
   RiskLevel,
 } from "@/lib/compound/types";
+import type { PriceOverrides } from "@/lib/compound/report-builder";
 
 type GenericRow = Record<string, unknown>;
 
@@ -185,6 +187,7 @@ function transformToLoanLedger(rows: GenericRow[]): LoanLedgerEntry[] {
 
 export function CompoundReportView({ report, loading = false }: Props) {
   const [viewMode, setViewMode] = useState<"calculated" | "raw" | "mapping">("calculated");
+  const [priceOverrides, setPriceOverrides] = useState<PriceOverrides>({});
   const period = report?.period ?? null;
 
   const normalizedEvents = useMemo(
@@ -201,8 +204,8 @@ export function CompoundReportView({ report, loading = false }: Props) {
   const compoundReport: CompoundReport | null = useMemo(() => {
     if (normalizedEvents.length === 0) return null;
     const events = transformToCompoundEvents(normalizedEvents);
-    return buildCompoundReport(events);
-  }, [normalizedEvents]);
+    return buildCompoundReport(events, priceOverrides);
+  }, [normalizedEvents, priceOverrides]);
 
   // Also extract ledger data directly from reconciliationRows (backend pre-calculated)
   const backendCollateralLedger = useMemo(
@@ -438,7 +441,19 @@ export function CompoundReportView({ report, loading = false }: Props) {
           </TabsContent>
 
           <TabsContent value="je">
-            <JournalEntriesTab borrowerRecon={borrowerRecon} />
+            <div className="space-y-4">
+              <PriceOverridesPanel
+                assets={[
+                  ...new Set([
+                    ...(compoundReport?.collateralTokens ?? []),
+                    ...(compoundReport?.debtTokens ?? []),
+                  ]),
+                ]}
+                overrides={priceOverrides}
+                onChange={setPriceOverrides}
+              />
+              <JournalEntriesTab borrowerRecon={borrowerRecon} />
+            </div>
           </TabsContent>
         </Tabs>
       )}
