@@ -107,6 +107,7 @@ export default function ActivityPage() {
   };
 
   const fetchReport = async () => {
+    console.log("[v0] fetchReport called, period:", period, "address:", address, "walletId:", walletId);
     if (!period) return;
 
     setLoadingReport(true);
@@ -122,11 +123,15 @@ export default function ActivityPage() {
       const res = await fetch(endpoint, { cache: "no-store" });
       const data = await res.json();
 
+      console.log("[v0] Activity page received data:", data);
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to fetch report");
       }
 
-      setReport(extractReportPayload(data));
+      const extracted = extractReportPayload(data);
+      console.log("[v0] Extracted report payload:", extracted);
+      setReport(extracted);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch report");
     } finally {
