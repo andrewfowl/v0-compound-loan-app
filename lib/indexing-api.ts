@@ -17,6 +17,10 @@ function ensureBackendUrl() {
   if (!BACKEND_API_BASE_URL) {
     throw new Error("Missing BACKEND_API_BASE_URL environment variable");
   }
+  // Ensure the URL has a protocol
+  if (!BACKEND_API_BASE_URL.startsWith("http://") && !BACKEND_API_BASE_URL.startsWith("https://")) {
+    return `https://${BACKEND_API_BASE_URL}`;
+  }
   return BACKEND_API_BASE_URL;
 }
 
