@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip"
 import type { BorrowerRecon, JournalEntry } from "@/lib/compound/types"
 import { formatUsd } from "@/lib/compound/format"
-import { Info } from "lucide-react"
+import { Info, ExternalLink } from "lucide-react"
 
 interface JournalEntriesTabProps {
   borrowerRecon: BorrowerRecon
@@ -112,19 +112,33 @@ function JournalEntryRow({ entry }: { entry: JournalEntry }) {
     <TableRow className={entry.computed ? "bg-muted/30 italic" : ""}>
       <TableCell className="text-sm text-muted-foreground">{entry.date}</TableCell>
       <TableCell className="text-sm">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex items-center gap-1 cursor-help">
-                {entry.description}
-                <Info className="h-3 w-3 text-muted-foreground" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-sm whitespace-pre-line text-xs">
-              {explanation}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 cursor-help">
+                  {entry.description}
+                  <Info className="h-3 w-3 text-muted-foreground" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-sm whitespace-pre-line text-xs">
+                {explanation}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {!entry.computed && entry.txHash && (
+            <a
+              href={`https://etherscan.io/tx/${entry.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:underline shrink-0"
+              title={`View on Etherscan: ${entry.txHash}`}
+            >
+              <ExternalLink className="h-3 w-3" />
+              {entry.txHash.slice(0, 6)}…{entry.txHash.slice(-4)}
+            </a>
+          )}
+        </div>
       </TableCell>
       <TableCell className="text-sm text-blue-600">{entry.debitAccount}</TableCell>
       <TableCell className="text-sm text-amber-600 pl-6">{entry.creditAccount}</TableCell>

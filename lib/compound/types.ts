@@ -63,6 +63,7 @@ export interface JournalEntry {
   usdAmount: number
   asset: string
   computed: boolean  // true for calculated entries like FV adjustments
+  txHash?: string    // on-chain tx hash; absent for computed/manual entries
 }
 
 // Monthly reconciliation group

@@ -32,10 +32,13 @@ import {
   BookOpen, 
   FileEdit, 
   Download,
+  Share2,
+  ExternalLink,
   ChevronDown,
   ChevronRight,
   Info,
   Sparkles,
+  Check,
 } from "lucide-react"
 import type { BorrowerRecon, JournalEntry, MonthlyReconGroup } from "@/lib/compound/types"
 import type { 
@@ -73,11 +76,79 @@ export function CustomizableJournalTab({
   endDate,
 }: CustomizableJournalTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("journal")
-  const [customization, setCustomization] = useState<JournalCustomization>(() => {
-    const empty = createEmptyCustomization()
-    // Initialize default prices from any existing price overrides
-    return empty
-  })
+  const [customization, setCustomization] = useState<JournalCustomization>(() => createEmptyCustomization())
+  const [shareCopied, setShareCopied] = useState(false)
+
+  /** Copy current URL to clipboard as shareable link */
+  const handleShare = useCallback(() => {
+    const url = typeof window !== "undefined" ? window.location.href : ""
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    })
+  }, [])
+
+  /** Export all journal entries to a CSV file */
+  const handleExport = useCallback((groups: typeof borrowerRecon.monthlyGroups, manualEntries: typeof customization.manualEntries) => {
+    const rows: string[] = [
+      ["Period", "Date", "Description", "Debit Account", "Credit Account", "DR (USD)", "CR (USD)", "Asset", "Source", "Tx Hash"].join(","),
+    ]
+
+    for (const group of groups) {
+      // Opening balance
+      rows.push([
+        group.periodLabel,
+        group.period + "-01",
+        "Opening Balance",
+        "",
+        "",
+        group.openingDebt.toFixed(2),
+        group.openingCollateral.toFixed(2),
+        "",
+        "system",
+        "",
+      ].map((v) => `"${v}"`).join(","))
+
+      for (const entry of group.entries) {
+        const isManual = entry.description.startsWith("[Manual]")
+        rows.push([
+          group.periodLabel,
+          entry.date,
+          isManual ? entry.description.replace("[Manual] ", "") : entry.description,
+          entry.debitAccount,
+          entry.creditAccount,
+          entry.usdAmount.toFixed(2),
+          entry.usdAmount.toFixed(2),
+          entry.asset,
+          isManual ? "manual" : entry.computed ? "computed" : "on-chain",
+          entry.txHash || "",
+        ].map((v) => `"${v}"`).join(","))
+      }
+
+      // Closing balance
+      rows.push([
+        group.periodLabel,
+        group.period + "-30",
+        "Closing Balance",
+        "",
+        "",
+        group.closingDebt.toFixed(2),
+        group.closingCollateral.toFixed(2),
+        "",
+        "system",
+        "",
+      ].map((v) => `"${v}"`).join(","))
+    }
+
+    const csv = rows.join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `journal-entries-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [])
 
   // Merge manual entries with on-chain entries
   const enhancedMonthlyGroups = useMemo(() => {
@@ -212,9 +283,26 @@ export function CustomizableJournalTab({
               {customization.manualEntries.length} manual
             </Badge>
           )}
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleShare}
+          >
+            {shareCopied ? (
+              <><Check className="size-4 text-green-500" /> Copied!</>
+            ) : (
+              <><Share2 className="size-4" /> Share</>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => handleExport(enhancedMonthlyGroups, customization.manualEntries)}
+          >
             <Download className="size-4" />
-            Export
+            Export CSV
           </Button>
         </div>
       </div>
@@ -443,9 +531,21 @@ function JournalView({
                             <TableCell className="font-mono">{entry.date}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                {isManual ? entry.description.replace("[Manual] ", "") : entry.description}
+                                <span>{isManual ? entry.description.replace("[Manual] ", "") : entry.description}</span>
                                 {entry.asset && (
                                   <Badge variant="outline" className="text-[10px]">{entry.asset}</Badge>
+                                )}
+                                {!isManual && !isComputed && entry.txHash && (
+                                  <a
+                                    href={`https://etherscan.io/tx/${entry.txHash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:underline shrink-0"
+                                    title={`View on Etherscan: ${entry.txHash}`}
+                                  >
+                                    <ExternalLink className="size-3" />
+                                    {entry.txHash.slice(0, 6)}…{entry.txHash.slice(-4)}
+                                  </a>
                                 )}
                               </div>
                             </TableCell>

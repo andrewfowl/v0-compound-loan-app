@@ -244,6 +244,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         } else if (e.activity === "repayment") {
           totalRepaid += amtUsd
@@ -257,6 +258,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         } else if (e.activity === "interest") {
           totalInterest += amtUsd
@@ -270,6 +272,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         } else if (e.activity === "liquidation") {
           totalLiquidated += amtUsd
@@ -283,6 +286,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         }
       } else {
@@ -298,6 +302,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         } else if (e.activity === "redemption") {
           runningCollateral -= amtUsd
@@ -310,6 +315,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         } else if (e.activity === "liquidation") {
           runningCollateral -= amtUsd
@@ -322,6 +328,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         } else if (e.activity === "interest") {
           runningCollateral += amtUsd
@@ -334,6 +341,7 @@ function buildBorrowerRecon(
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
+            txHash: e.transactionHash || undefined,
           })
         }
       }
