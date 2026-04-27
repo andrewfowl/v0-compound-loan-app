@@ -21,24 +21,24 @@ export function PositionRiskCards({ positions }: PositionRiskCardsProps) {
       <TooltipProvider>
         {positions.map((pos) => {
           const ltvColor =
-            pos.riskLevel === "critical" ? "text-red-500" :
-            pos.riskLevel === "at-risk" ? "text-amber-500" :
-            pos.riskLevel === "monitor" ? "text-yellow-500" :
-            "text-green-500"
+            pos.riskLevel === "critical" ? "text-destructive" :
+            pos.riskLevel === "at-risk" ? "text-warning" :
+            pos.riskLevel === "monitor" ? "text-warning/70" :
+            "text-success"
           const borderColor =
-            pos.riskLevel === "critical" ? "border-red-300 dark:border-red-800" :
-            pos.riskLevel === "at-risk" ? "border-amber-300 dark:border-amber-800" :
-            pos.riskLevel === "monitor" ? "border-yellow-300 dark:border-yellow-800" :
+            pos.riskLevel === "critical" ? "border-destructive/40 dark:border-destructive/30" :
+            pos.riskLevel === "at-risk" ? "border-warning/40 dark:border-warning/30" :
+            pos.riskLevel === "monitor" ? "border-warning/20 dark:border-warning/20" :
             "border-border"
 
           return (
-            <div key={pos.asset} className={`grid grid-cols-3 gap-0 rounded-xl border ${borderColor} bg-card overflow-hidden`}>
+            <div key={pos.asset} className={`grid grid-cols-3 gap-0 rounded-xl border ${borderColor} bg-gradient-card overflow-hidden`}>
               {/* Total Debt */}
               <div className="px-4 py-3 border-r">
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
                   {pos.asset} — Total Debt
                 </p>
-                <p className="font-mono font-bold text-red-500 text-lg">
+                <p className="font-mono font-bold text-negative text-lg">
                   {formatUsd(pos.debtUsd)}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">

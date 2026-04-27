@@ -98,12 +98,12 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 12%;
     
-    /* Primary - Professional Blue */
-    --primary: 215 70% 50%;
+    /* Primary - Neutral Gray (removed blue) */
+    --primary: 220 10% 40%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 215 70% 45%;
-    --primary-active: 215 70% 40%;
-    --primary-muted: 215 70% 95%;
+    --primary-hover: 220 10% 35%;
+    --primary-active: 220 10% 30%;
+    --primary-muted: 220 10% 92%;
     
     /* Secondary - Neutral Gray */
     --secondary: 220 15% 92%;
@@ -115,9 +115,9 @@
     --muted: 220 15% 94%;
     --muted-foreground: 220 12% 50%;
     
-    /* Accent - Highlights */
-    --accent: 215 70% 96%;
-    --accent-foreground: 215 70% 35%;
+    /* Accent - Neutral accent (removed blue) */
+    --accent: 220 10% 88%;
+    --accent-foreground: 220 10% 25%;
     
     /* Semantic Colors */
     --destructive: 0 80% 50%;
@@ -132,16 +132,16 @@
     --warning-foreground: 0 0% 10%;
     --warning-muted: 35 90% 95%;
     
-    --info: 200 80% 50%;
+    --info: 220 15% 55%;
     --info-foreground: 0 0% 100%;
-    --info-muted: 200 80% 95%;
+    --info-muted: 220 15% 92%;
     
     /* Borders & Inputs */
     --border: 220 15% 88%;
     --border-muted: 220 15% 92%;
     --border-strong: 220 15% 80%;
     --input: 220 15% 88%;
-    --ring: 215 70% 50%;
+    --ring: 220 10% 40%;
     
     /* Text Colors */
     --text-primary: 220 15% 12%;
@@ -150,15 +150,15 @@
     --text-disabled: 220 8% 70%;
     --text-inverse: 0 0% 100%;
     
-    /* Chart Colors (Accessible Palette) */
-    --chart-1: 215 70% 50%;      /* Blue */
+    /* Chart Colors (removed blues, grayscale focus) */
+    --chart-1: 220 10% 40%;      /* Charcoal */
     --chart-2: 140 60% 45%;      /* Green */
     --chart-3: 35 90% 50%;       /* Orange */
-    --chart-4: 260 70% 55%;      /* Purple */
+    --chart-4: 0 75% 55%;        /* Red */
     --chart-5: 180 60% 45%;      /* Teal */
     --chart-6: 340 75% 55%;      /* Pink */
     --chart-7: 45 85% 55%;       /* Yellow */
-    --chart-8: 280 65% 50%;      /* Violet */
+    --chart-8: 260 65% 50%;      /* Violet */
     
     /* Financial-specific Colors */
     --positive: 140 60% 45%;     /* Gains, profits */
@@ -1239,6 +1239,119 @@
   .hover-brighten:hover {
     filter: brightness(1.1);
   }
+  
+  /* Shimmer Animation (Next.js style) */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--background)),
+      hsl(var(--background) / 0.5),
+      hsl(var(--background))
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* Gradient Background Utilities */
+  .gradient-to-br {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--surface-1)),
+      hsl(var(--surface-2))
+    );
+  }
+  
+  .gradient-to-t {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background)),
+      hsl(var(--surface-1))
+    );
+  }
+  
+  .gradient-subtle {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background)),
+      hsl(var(--background) / 0.9)
+    );
+  }
+  
+  .gradient-card {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--card)),
+      hsl(var(--card) / 0.95)
+    );
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .gradient-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      transparent,
+      hsl(var(--foreground) / 0.03),
+      transparent
+    );
+    pointer-events: none;
+  }
+  
+  /* Subtle accent gradients */
+  .gradient-accent-sm {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--accent) / 0.05),
+      hsl(var(--accent) / 0.02)
+    );
+  }
+  
+  /* Loading skeleton with shimmer */
+  .skeleton {
+    @apply bg-muted rounded;
+    animation: skeleton-loading 1s linear infinite alternate;
+  }
+  
+  @keyframes skeleton-loading {
+    0% {
+      background-color: hsl(var(--muted));
+    }
+    100% {
+      background-color: hsl(var(--muted) / 0.7);
+    }
+  }
+  
+  /* Pulse animation */
+  .pulse-soft {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  
+  /* Fade gradient borders */
+  .border-gradient {
+    border: 1px solid;
+    border-image: linear-gradient(
+      135deg,
+      hsl(var(--border)),
+      hsl(var(--border) / 0.3)
+    ) 1;
+  }
 }
 
 /* ============================================================================
@@ -1447,7 +1560,101 @@
   }
   
   .dark {
-    --border: 220 17% 60%;
-    --muted-foreground: 220 12% 70%;
+    /* Dark Mode - Deep charcoal, professional */
+    --background: 220 16% 9%;
+    --foreground: 220 14% 90%;
+    
+    /* Surfaces - Layered depth */
+    --surface-0: 220 16% 9%;
+    --surface-1: 220 17% 12%;
+    --surface-2: 220 17% 15%;
+    --surface-3: 220 17% 18%;
+    
+    /* Card & Popover */
+    --card: 220 17% 12%;
+    --card-foreground: 220 14% 90%;
+    --popover: 220 17% 14%;
+    --popover-foreground: 220 14% 90%;
+    
+    /* Primary - Charcoal (removed blue) */
+    --primary: 220 15% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 220 15% 55%;
+    --primary-active: 220 15% 50%;
+    --primary-muted: 220 17% 18%;
+    
+    /* Secondary */
+    --secondary: 220 17% 18%;
+    --secondary-foreground: 220 14% 80%;
+    --secondary-hover: 220 17% 16%;
+    --secondary-active: 220 17% 14%;
+    
+    /* Muted */
+    --muted: 220 17% 16%;
+    --muted-foreground: 220 12% 60%;
+    
+    /* Accent - Neutral (removed blue) */
+    --accent: 220 17% 20%;
+    --accent-foreground: 220 14% 85%;
+    
+    /* Semantic */
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-muted: 220 17% 15%;
+    
+    --success: 140 65% 55%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 220 17% 15%;
+    
+    --warning: 35 90% 60%;
+    --warning-foreground: 0 0% 12%;
+    --warning-muted: 220 17% 15%;
+    
+    --info: 220 15% 65%;
+    --info-foreground: 0 0% 100%;
+    --info-muted: 220 17% 15%;
+    
+    /* Borders */
+    --border: 220 17% 18%;
+    --border-muted: 220 17% 16%;
+    --border-strong: 220 17% 22%;
+    --input: 220 17% 18%;
+    --ring: 220 15% 60%;
+    
+    /* Text Colors */
+    --text-primary: 220 14% 90%;
+    --text-secondary: 220 12% 70%;
+    --text-tertiary: 220 10% 55%;
+    --text-disabled: 220 8% 40%;
+    --text-inverse: 220 16% 9%;
+    
+    /* Chart Colors */
+    --chart-1: 220 15% 60%;      /* Charcoal */
+    --chart-2: 140 65% 55%;      /* Green */
+    --chart-3: 35 90% 60%;       /* Orange */
+    --chart-4: 0 75% 60%;        /* Red */
+    --chart-5: 180 65% 55%;      /* Teal */
+    --chart-6: 340 75% 60%;      /* Pink */
+    --chart-7: 45 85% 60%;       /* Yellow */
+    --chart-8: 260 70% 60%;      /* Violet */
+    
+    /* Sidebar - Slightly lighter surface */
+    --sidebar-background: 220 18% 10%;
+    --sidebar-foreground: 220 14% 85%;
+    --sidebar-primary: 220 15% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 18% 16%;
+    --sidebar-accent-foreground: 220 15% 70%;
+    --sidebar-border: 220 18% 15%;
+    --sidebar-ring: 220 15% 60%;
+    
+    /* Shadows - More prominent in dark */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.45), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.3);
   }
 }
