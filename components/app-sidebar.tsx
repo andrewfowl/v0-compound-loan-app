@@ -7,11 +7,6 @@ import {
   FileText,
   Home,
   Settings,
-  HelpCircle,
-  Wallet,
-  BarChart3,
-  History,
-  ChevronDown,
   Building2,
   LogOut,
   User,
@@ -19,6 +14,7 @@ import {
   CreditCard,
   Shield,
   Plus,
+  ChevronDown,
 } from "lucide-react"
 
 import {
@@ -54,29 +50,10 @@ const mainNavItems = [
     description: "Overview and quick actions",
   },
   {
-    title: "Reports",
-    url: "/reports",
+    title: "Activity",
+    url: "/activity",
     icon: FileText,
-    badge: 3,
-    description: "View and manage reports",
-  },
-  {
-    title: "Wallets",
-    url: "/wallets",
-    icon: Wallet,
-    description: "Connected wallet addresses",
-  },
-  {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart3,
-    description: "Data insights and trends",
-  },
-  {
-    title: "History",
-    url: "/history",
-    icon: History,
-    description: "Activity and audit logs",
+    description: "Wallet transaction reports",
   },
 ]
 
@@ -85,11 +62,6 @@ const settingsNavItems = [
     title: "Settings",
     url: "/settings",
     icon: Settings,
-  },
-  {
-    title: "Help Center",
-    url: "/help",
-    icon: HelpCircle,
   },
 ]
 
