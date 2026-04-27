@@ -8,8 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserBadge } from "@/components/user-identity";
-import { FileText, Plus, Wallet, Calendar, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { AppShell } from "@/components/app-shell";
+import { 
+  FileText, 
+  Plus, 
+  Wallet, 
+  Calendar, 
+  ArrowRight, 
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
 // Sample addresses to auto-fetch reports for
 const SAMPLE_ADDRESSES = [
@@ -60,10 +71,9 @@ function saveUserPrefs(prefs: Partial<UserPrefs>) {
   }
 }
 
-export default function HomePage() {
+function DashboardContent() {
   const router = useRouter();
 
-  const [userId, setUserId] = useState<string>("user_123");
   const [address, setAddress] = useState("");
   const [walletStartDate, setWalletStartDate] = useState("2021-04-01");
   const [reportEndMonth, setReportEndMonth] = useState("2021-05");
@@ -77,7 +87,6 @@ export default function HomePage() {
 
   useEffect(() => {
     const prefs = loadUserPrefs();
-    setUserId(prefs.userId || "");
     if (prefs.lastAddress) setAddress(prefs.lastAddress);
     if (prefs.lastWalletStartDate) setWalletStartDate(prefs.lastWalletStartDate);
     if (prefs.lastReportEndMonth) setReportEndMonth(prefs.lastReportEndMonth);
@@ -116,14 +125,7 @@ export default function HomePage() {
     }
 
     fetchSampleWallets();
-  }, [userId]); // re-fetch when user switches
-
-  const handleSwitchUser = (newId: string) => {
-    const id = newId || "user_123";
-    setUserId(id);
-    saveUserPrefs({ userId: id });
-    setSampleWallets([]);
-  };
+  }, []);
 
   const handleViewReport = (wallet: WalletStatus, period: string) => {
     router.push(`/activity/${wallet.address}?period=${encodeURIComponent(period)}`);
@@ -170,9 +172,7 @@ export default function HomePage() {
         const catalogData = await catalogRes.json();
         const availablePeriods: string[] = catalogData.availablePeriods || [];
         if (availablePeriods.includes(reportEndMonth)) {
-          router.push(
-            `/activity/${address.toLowerCase()}?period=${reportEndMonth}&userId=${encodeURIComponent(userId!)}`
-          );
+          router.push(`/activity/${address.toLowerCase()}?period=${reportEndMonth}`);
           return;
         }
       }
@@ -211,227 +211,275 @@ export default function HomePage() {
 
   const walletsWithData = sampleWallets.filter((w) => w.hasData);
   const walletsWithoutData = sampleWallets.filter((w) => !w.hasData);
+  const totalReports = walletsWithData.reduce((acc, w) => acc + w.availablePeriods.length, 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <FileText className="h-5 w-5" />
+    <div className="p-6 space-y-6">
+      {/* Stats Row */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loadingSamples ? "-" : totalReports}</div>
+            <p className="text-xs text-muted-foreground">Across all wallets</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Wallets</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loadingSamples ? "-" : walletsWithData.length}</div>
+            <p className="text-xs text-muted-foreground">With indexed data</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Processing</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">Jobs in queue</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <span className="text-sm font-medium">All systems operational</span>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold">Compound Reporting</h1>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="reports" className="gap-2">
+            <FileText className="h-4 w-4" />
+            View Reports
+          </TabsTrigger>
+          <TabsTrigger value="index" className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Request
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="reports" className="space-y-6">
+          {/* Wallets with reports */}
+          {loadingSamples ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
             </div>
-          </div>
-          <UserBadge userId={userId} onSwitch={handleSwitchUser} />
-
-        </div>
-      </header>
-
-      <main className="container mx-auto max-w-4xl px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="reports" className="gap-2">
-              <FileText className="h-4 w-4" />
-              View Reports
-            </TabsTrigger>
-            <TabsTrigger value="index" className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Request
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="reports" className="space-y-6">
-            {/* Wallets with reports */}
-            {loadingSamples ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32" />
-                ))}
-              </div>
-            ) : walletsWithData.length > 0 ? (
-              <div className="space-y-4">
+          ) : walletsWithData.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <FileText className="h-4 w-4" />
                   Available Reports
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {walletsWithData.map((wallet) => (
-                    <Card key={wallet.address} className="overflow-hidden transition-shadow hover:shadow-md">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                              <Wallet className="h-4 w-4 text-primary" />
-                            </div>
-                            <code className="text-sm font-medium">{formatAddress(wallet.address)}</code>
+                <Badge variant="secondary">{totalReports} reports</Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {walletsWithData.map((wallet) => (
+                  <Card key={wallet.address} className="overflow-hidden transition-all hover:shadow-md hover:border-primary/50">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                            <Wallet className="h-5 w-5 text-primary" />
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1 text-xs"
-                            onClick={() => handleIndexAddress(wallet.address)}
-                          >
-                            <Plus className="h-3 w-3" />
-                            Index
-                          </Button>
+                          <div>
+                            <code className="text-sm font-semibold">{formatAddress(wallet.address)}</code>
+                            <p className="text-xs text-muted-foreground">{wallet.availablePeriods.length} periods</p>
+                          </div>
                         </div>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="flex flex-wrap gap-2">
-                          {wallet.availablePeriods.map((period) => (
-                            <Button
-                              key={period}
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs font-medium"
-                              onClick={() => handleViewReport(wallet, period)}
-                            >
-                              <Calendar className="h-3 w-3" />
-                              {period}
-                              <ArrowRight className="h-3 w-3" />
-                            </Button>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                  <h3 className="mb-2 text-lg font-medium">No reports available</h3>
-                  <p className="mb-4 max-w-sm text-sm text-muted-foreground">
-                    Start by indexing a wallet to generate your first report.
-                  </p>
-                  <Button onClick={() => setActiveTab("index")}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create New Request
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Wallets without reports */}
-            {!loadingSamples && walletsWithoutData.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Wallet className="h-4 w-4" />
-                  Sample Wallets (Not Indexed)
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {walletsWithoutData.map((wallet) => (
-                    <Button
-                      key={wallet.address}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-2 font-mono text-xs"
-                      onClick={() => handleIndexAddress(wallet.address)}
-                    >
-                      {formatAddress(wallet.address)}
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="index">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  New Indexing Request
-                </CardTitle>
-                <CardDescription>
-                  Enter a wallet address and date range to generate a reconciliation report.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <Field>
-                    <FieldLabel>Ethereum Address</FieldLabel>
-                    <Input
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="0x..."
-                      className="font-mono"
-                    />
-                  </Field>
-
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Quick select:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {SAMPLE_ADDRESSES.slice(0, 6).map((addr) => (
                         <Button
-                          key={addr}
-                          type="button"
-                          variant={address.toLowerCase() === addr.toLowerCase() ? "default" : "outline"}
+                          variant="ghost"
                           size="sm"
-                          onClick={() => setAddress(addr)}
-                          className="font-mono text-xs"
+                          className="h-8 gap-1 text-xs"
+                          onClick={() => handleIndexAddress(wallet.address)}
                         >
-                          {formatAddress(addr)}
+                          <Plus className="h-3 w-3" />
+                          Add
                         </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel>Wallet Start Date</FieldLabel>
-                      <Input
-                        value={walletStartDate}
-                        onChange={(e) => setWalletStartDate(e.target.value)}
-                        placeholder="YYYY-MM-DD"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel>Report End Month</FieldLabel>
-                      <Input
-                        value={reportEndMonth}
-                        onChange={(e) => setReportEndMonth(e.target.value)}
-                        placeholder="YYYY-MM"
-                      />
-                    </Field>
-                  </div>
-
-                  {error && (
-                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                      {error}
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-3">
-                    <Button type="submit" disabled={loading} className="gap-2">
-                      {loading ? (
-                        "Starting..."
-                      ) : (
-                        <>
-                          Start Indexing
-                          <ArrowRight className="h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setActiveTab("reports")}
-                    >
-                      View Existing Reports
-                    </Button>
-                  </div>
-                </form>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-2">
+                        {wallet.availablePeriods.map((period) => (
+                          <Button
+                            key={period}
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs font-medium"
+                            onClick={() => handleViewReport(wallet, period)}
+                          >
+                            <Calendar className="h-3 w-3" />
+                            {period}
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                  <FileText className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold">No reports available</h3>
+                <p className="mb-6 max-w-sm text-sm text-muted-foreground">
+                  Start by indexing a wallet to generate your first reconciliation report.
+                </p>
+                <Button onClick={() => setActiveTab("index")} size="lg">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create New Request
+                </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+          )}
+
+          {/* Wallets without reports */}
+          {!loadingSamples && walletsWithoutData.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                Sample Wallets (Not Indexed)
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {walletsWithoutData.map((wallet) => (
+                  <Button
+                    key={wallet.address}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-2 font-mono text-xs"
+                    onClick={() => handleIndexAddress(wallet.address)}
+                  >
+                    {formatAddress(wallet.address)}
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="index">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                New Indexing Request
+              </CardTitle>
+              <CardDescription>
+                Enter a wallet address and date range to generate a reconciliation report.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Field>
+                  <FieldLabel>Ethereum Address</FieldLabel>
+                  <Input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="0x..."
+                    className="font-mono"
+                  />
+                </Field>
+
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Quick select:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {SAMPLE_ADDRESSES.slice(0, 6).map((addr) => (
+                      <Button
+                        key={addr}
+                        type="button"
+                        variant={address.toLowerCase() === addr.toLowerCase() ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setAddress(addr)}
+                        className="font-mono text-xs"
+                      >
+                        {formatAddress(addr)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel>Wallet Start Date</FieldLabel>
+                    <Input
+                      value={walletStartDate}
+                      onChange={(e) => setWalletStartDate(e.target.value)}
+                      placeholder="YYYY-MM-DD"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Report End Month</FieldLabel>
+                    <Input
+                      value={reportEndMonth}
+                      onChange={(e) => setReportEndMonth(e.target.value)}
+                      placeholder="YYYY-MM"
+                    />
+                  </Field>
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-3">
+                  <Button type="submit" disabled={loading} size="lg" className="gap-2">
+                    {loading ? (
+                      "Starting..."
+                    ) : (
+                      <>
+                        Start Indexing
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setActiveTab("reports")}
+                  >
+                    View Existing Reports
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <AppShell>
+      <DashboardContent />
+    </AppShell>
   );
 }

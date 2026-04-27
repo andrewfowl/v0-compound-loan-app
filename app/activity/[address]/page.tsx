@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { RefreshCw, Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { CompoundReportView } from "@/components/compound-report-view";
+import { AppShell } from "@/components/app-shell";
 
 const USER_PREFS_KEY = "compound-reporting-user-prefs";
 
@@ -62,7 +63,7 @@ function loadUserIdFromStorage(): string {
   }
 }
 
-export default function ActivityPage() {
+function ActivityContent() {
   const params = useParams();
   const searchParams = useSearchParams();
 
@@ -71,7 +72,6 @@ export default function ActivityPage() {
   const walletId = searchParams.get("walletId") || "";
   const period = searchParams.get("period") || "";
 
-  const [userId, setUserId] = useState("user_123");
   const [isHydrated, setIsHydrated] = useState(false);
 
   const [job, setJob] = useState<JobStatus | null>(null);
@@ -82,7 +82,7 @@ export default function ActivityPage() {
 
   // Load userId from localStorage on mount
   useEffect(() => {
-    setUserId(loadUserIdFromStorage());
+    loadUserIdFromStorage();
     setIsHydrated(true);
   }, []);
 
@@ -115,8 +115,6 @@ export default function ActivityPage() {
     setError("");
 
     try {
-      // Use walletId-based endpoint if available (from job flow), otherwise use address-based endpoint
-      // userId will be sent via x-user-id header by the API route (no query param needed)
       const endpoint = walletId
         ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`
         : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}`;
@@ -136,11 +134,10 @@ export default function ActivityPage() {
     }
   };
 
-  // If no jobId but we have period (and address from URL), load report directly
   const directView = !jobId && period;
 
   useEffect(() => {
-    if (!isHydrated) return; // Wait for hydration before fetching
+    if (!isHydrated) return;
     
     if (directView) {
       setLoadingJob(false);
@@ -184,30 +181,42 @@ export default function ActivityPage() {
   }, [job?.status, period, report]);
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="p-6 space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="mb-2">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Link>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl font-semibold">Wallet Report</h1>
+            {period && <Badge variant="secondary">{period}</Badge>}
           </div>
-
-          <h1 className="text-2xl font-semibold">Compound Reporting</h1>
-          <p className="text-sm text-muted-foreground">
-            {formatAddress(address)} {period ? `• ${period}` : ""}
+          <p className="text-sm text-muted-foreground font-mono">
+            {address}
           </p>
         </div>
 
-        <Button variant="outline" onClick={() => { fetchJob(); if (job?.status === "completed") fetchReport(); }}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="gap-2"
+            onClick={() => { fetchJob(); if (job?.status === "completed") fetchReport(); }}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {error ? (
-        <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       ) : null}
@@ -218,15 +227,26 @@ export default function ActivityPage() {
         <Card>
           <CardContent className="py-8">
             <p className="text-sm text-muted-foreground">
-              Missing job context. Start a new indexing job from the home page.
+              Missing job context. Start a new indexing job from the dashboard.
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
-              <CardTitle>Indexing status</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Indexing Progress
+                {job?.status === "completed" && (
+                  <Badge variant="default" className="bg-green-600">Completed</Badge>
+                )}
+                {job?.status === "failed" && (
+                  <Badge variant="destructive">Failed</Badge>
+                )}
+                {job?.status && !["completed", "failed"].includes(job.status) && (
+                  <Badge variant="secondary">{job.status}</Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingJob ? (
@@ -236,7 +256,7 @@ export default function ActivityPage() {
                   <div className="grid gap-4 md:grid-cols-4">
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">Status</div>
-                      <div className="font-medium">{job.status}</div>
+                      <div className="font-medium capitalize">{job.status}</div>
                     </div>
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">Progress</div>
@@ -248,19 +268,19 @@ export default function ActivityPage() {
                     </div>
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">Detail</div>
-                      <div className="font-medium">{job.currentStageDetail || "—"}</div>
+                      <div className="font-medium truncate">{job.currentStageDetail || "—"}</div>
                     </div>
                   </div>
 
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full bg-primary transition-all"
+                      className="h-full bg-primary transition-all duration-500"
                       style={{ width: `${Math.max(0, Math.min(100, job.progressPercent || 0))}%` }}
                     />
                   </div>
 
                   {job.error?.message ? (
-                    <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                       {job.error.message}
                     </div>
                   ) : null}
@@ -272,10 +292,11 @@ export default function ActivityPage() {
           {job?.status === "completed" ? (
             <CompoundReportView report={report} loading={loadingReport} />
           ) : (
-            <Card>
-              <CardContent className="py-8">
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <div className="mx-auto mb-4 h-12 w-12 animate-pulse rounded-full bg-muted" />
                 <p className="text-sm text-muted-foreground">
-                  Waiting for indexing to finish before loading reporting tabs.
+                  Waiting for indexing to complete...
                 </p>
               </CardContent>
             </Card>
@@ -283,5 +304,13 @@ export default function ActivityPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <AppShell>
+      <ActivityContent />
+    </AppShell>
   );
 }
