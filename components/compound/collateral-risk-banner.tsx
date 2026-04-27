@@ -2,6 +2,8 @@
 
 import type { BorrowerRecon } from "@/lib/compound/types"
 import { formatUsd } from "@/lib/compound/format"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { HelpCircle } from "lucide-react"
 
 interface CollateralRiskBannerProps {
   borrowerRecon: BorrowerRecon
@@ -47,25 +49,41 @@ export function CollateralRiskBanner({ borrowerRecon }: CollateralRiskBannerProp
       </div>
       <p className="text-xs text-muted-foreground">{cfg.body}</p>
       <div className="grid grid-cols-3 gap-3 pt-1">
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Current LTV</p>
-          <p className={`font-mono font-bold text-sm ${cfg.ltvColor}`}>
-            {(ltv * 100).toFixed(1)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Collateral at Risk</p>
-          <p className="font-mono font-bold text-sm text-red-500">
-            {formatUsd(atRiskUsd)}
-            <span className="text-muted-foreground font-normal text-[10px] ml-1">({pctAtRisk.toFixed(0)}% of total)</span>
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Buffer to Liquidation</p>
-          <p className={`font-mono font-bold text-sm ${bufferUsd <= 0 ? "text-red-500" : ""}`}>
-            {bufferUsd <= 0 ? "LIQUIDATABLE NOW" : formatUsd(bufferUsd)}
-          </p>
-        </div>
+        <TooltipProvider>
+          <div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5 cursor-help inline-flex items-center gap-0.5">
+                  Current LTV
+                  <HelpCircle className="size-3 text-muted-foreground/50" />
+                </p>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-sm">Loan-to-Value Ratio</p>
+                  <p className="text-xs">Calculated as: Total Debt USD ÷ Total Collateral USD</p>
+                  <p className="text-xs">Liquidation occurs when LTV exceeds 80%. Compound Protocol auto-liquidates at this threshold. Source: Chainlink price feeds via Compound oracle.</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+            <p className={`font-mono font-bold text-sm ${cfg.ltvColor}`}>
+              {(ltv * 100).toFixed(1)}%
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Collateral at Risk</p>
+            <p className="font-mono font-bold text-sm text-red-500">
+              {formatUsd(atRiskUsd)}
+              <span className="text-muted-foreground font-normal text-[10px] ml-1">({pctAtRisk.toFixed(0)}% of total)</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Buffer to Liquidation</p>
+            <p className={`font-mono font-bold text-sm ${bufferUsd <= 0 ? "text-red-500" : ""}`}>
+              {bufferUsd <= 0 ? "LIQUIDATABLE NOW" : formatUsd(bufferUsd)}
+            </p>
+          </div>
+        </TooltipProvider>
       </div>
     </div>
   )
