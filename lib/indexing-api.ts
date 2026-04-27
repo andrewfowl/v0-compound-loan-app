@@ -2,7 +2,7 @@ import "server-only";
 
 const BACKEND_API_BASE_URL = process.env.BACKEND_API_BASE_URL;
 const BACKEND_PROXY_USER_ID =
-  process.env.BACKEND_PROXY_USER_ID || "frontend-demo";
+  process.env.BACKEND_PROXY_USER_ID || "user_123";
 
 // User IDs to try when fetching sample wallet data
 export const SAMPLE_USER_IDS = ["user_123", "frontend-demo"];
