@@ -1,64 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-// import { kryptosFetch } from "@/lib/kryptos"
 import type { AccountType, ActivityType, EventName, CompoundEvent } from "@/lib/compound/types"
-
-const USE_KRYPTOS = process.env.KRYPTOS_ENABLED === "true"
 
 type EventMapping = {
   accountType: AccountType
   activity: ActivityType
   eventName: EventName
-}
-
-const EVENT_MAP: Record<string, EventMapping> = {
-  mint: { accountType: "collateral", activity: "deposit", eventName: "Mint" },
-  supply: { accountType: "collateral", activity: "deposit", eventName: "Mint" },
-  deposit: { accountType: "collateral", activity: "deposit", eventName: "Mint" },
-  redeem: { accountType: "collateral", activity: "redemption", eventName: "Redeem" },
-  withdraw: { accountType: "collateral", activity: "redemption", eventName: "Redeem" },
-  redemption: { accountType: "collateral", activity: "redemption", eventName: "Redeem" },
-  borrow: { accountType: "debt", activity: "borrowing", eventName: "Borrow" },
-  borrowing: { accountType: "debt", activity: "borrowing", eventName: "Borrow" },
-  repay: { accountType: "debt", activity: "repayment", eventName: "RepayBorrow" },
-  repayment: { accountType: "debt", activity: "repayment", eventName: "RepayBorrow" },
-  liquidate: { accountType: "collateral", activity: "liquidation", eventName: "LiquidateBorrow" },
-  liquidation: { accountType: "collateral", activity: "liquidation", eventName: "LiquidateBorrow" },
-}
-
-function mapEventType(raw: string): EventMapping | null {
-  const value = raw.toLowerCase()
-  for (const [key, mapped] of Object.entries(EVENT_MAP)) {
-    if (value.includes(key)) return mapped
-  }
-  return null
-}
-
-function toCompoundEvent(tx: any): CompoundEvent | null {
-  const protocol = String(
-    tx.protocol ?? tx.protocol_name ?? tx.protocolMarket ?? tx.platform ?? ""
-  ).toLowerCase()
-
-  if (!protocol.includes("compound")) return null
-
-  const rawType = String(
-    tx.activity_type ?? tx.type ?? tx.category ?? tx.event_name ?? ""
-  )
-
-  const mapping = mapEventType(rawType)
-  if (!mapping) return null
-
-  return {
-    id: String(tx.id ?? `${tx.tx_hash ?? tx.transaction_hash}-${tx.event_index ?? 0}`),
-    blockNumber: String(tx.block_number ?? ""),
-    timestamp: String(tx.block_timestamp ?? tx.timestamp ?? ""),
-    transactionHash: String(tx.tx_hash ?? tx.transaction_hash ?? ""),
-    accountType: mapping.accountType,
-    activity: mapping.activity,
-    eventName: mapping.eventName,
-    asset: String(tx.token_symbol ?? tx.asset_symbol ?? tx.symbol ?? "UNKNOWN"),
-    amount: String(tx.amount ?? 0),
-    amountUsd: String(tx.amount_usd ?? tx.usd_value ?? 0),
-  }
 }
 
 function generateMockCompoundEvents(address: string): CompoundEvent[] {
@@ -124,48 +70,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid Ethereum address" }, { status: 400 })
   }
 
-  if (!USE_KRYPTOS) {
-    return NextResponse.json({
-      events: generateMockCompoundEvents(address),
-      source: "mock",
-    })
-  }
-
-  try {
-    const txResponse = await kryptosFetch<any>("/transactions", {
-      method: "POST",
-      body: JSON.stringify({
-        walletAddress: address,
-      }),
-    })
-
-    const rawTxs = Array.isArray(txResponse?.data)
-      ? txResponse.data
-      : Array.isArray(txResponse?.transactions)
-        ? txResponse.transactions
-        : Array.isArray(txResponse)
-          ? txResponse
-          : []
-
-    const events = rawTxs
-      .map(toCompoundEvent)
-      .filter(Boolean)
-      .sort(
-        (a: CompoundEvent | null, b: CompoundEvent | null) =>
-          new Date(b!.timestamp).getTime() - new Date(a!.timestamp).getTime()
-      )
-
-    return NextResponse.json({
-      events,
-      source: "kryptos",
-    })
-  } catch (error) {
-    console.error("[v0] Kryptos compound activity error:", error)
-
-    return NextResponse.json({
-      events: generateMockCompoundEvents(address),
-      source: "mock-fallback",
-      upstreamError: error instanceof Error ? error.message : "Unknown Kryptos error",
-    })
-  }
+  // Legacy endpoint - always return mock data
+  // For real data, use the new /api/indexing/* endpoints
+  return NextResponse.json({
+    events: generateMockCompoundEvents(address),
+    source: "mock",
+    deprecated: true,
+    message: "This endpoint is deprecated. Use /api/indexing/jobs to start indexing.",
+  })
 }
