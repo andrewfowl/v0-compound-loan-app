@@ -75,3 +75,9 @@ export async function getIndexingReport(walletId: string, period: string) {
     method: "GET",
   });
 }
+
+export async function listWallets() {
+  return backendFetch("/api/wallets", {
+    method: "GET",
+  });
+}

@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
+
+type Wallet = {
+  id: string;
+  walletAddress: string;
+  reports?: { period: string }[];
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -15,6 +22,32 @@ export default function HomePage() {
   const [reportEndMonth, setReportEndMonth] = useState("2021-05");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [loadingWallets, setLoadingWallets] = useState(true);
+
+  useEffect(() => {
+    async function fetchWallets() {
+      try {
+        const res = await fetch("/api/indexing/wallets", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data)) {
+          setWallets(data);
+        } else if (res.ok && data.wallets) {
+          setWallets(data.wallets);
+        }
+      } catch {
+        // silently fail - wallets list is optional
+      } finally {
+        setLoadingWallets(false);
+      }
+    }
+    fetchWallets();
+  }, []);
+
+  const handleViewReport = (wallet: Wallet, period: string) => {
+    router.push(`/activity/${wallet.walletAddress}?walletId=${wallet.id}&period=${period}`);
+  };
 
   const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
 
@@ -144,10 +177,64 @@ export default function HomePage() {
                   setReportEndMonth("2021-05");
                 }}
               >
-                Load sample wallet
+                Fill sample wallet
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Existing Reports</CardTitle>
+          <CardDescription>
+            Previously indexed wallets with available reports
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingWallets ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : wallets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No existing wallets found. Start indexing a wallet above.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {wallets.map((wallet) => (
+                <div
+                  key={wallet.id}
+                  className="flex flex-col gap-2 rounded-lg border p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <code className="text-sm font-mono">
+                      {wallet.walletAddress}
+                    </code>
+                  </div>
+                  {wallet.reports && wallet.reports.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {wallet.reports.map((report) => (
+                        <Button
+                          key={report.period}
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleViewReport(wallet, report.period)}
+                        >
+                          {report.period}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No reports available yet
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
