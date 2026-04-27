@@ -155,3 +155,60 @@ export async function getWalletReports(
     userId,
   });
 }
+
+/**
+ * Discover available report periods for a wallet by querying wallet-reports.
+ * Returns array of period strings (e.g., ["2021-04", "2021-05"]).
+ */
+export async function discoverWalletPeriods(
+  address: string,
+  userId?: string
+): Promise<string[]> {
+  try {
+    const data = await getWalletReports(address, undefined, userId);
+    // Handle various response formats
+    if (Array.isArray(data)) {
+      // Array of reports with period field
+      return data.map((r: { period?: string }) => r.period).filter(Boolean) as string[];
+    }
+    if (data?.reports && Array.isArray(data.reports)) {
+      return data.reports.map((r: { period?: string }) => r.period).filter(Boolean) as string[];
+    }
+    if (data?.periods && Array.isArray(data.periods)) {
+      return data.periods;
+    }
+    if (data?.availablePeriods && Array.isArray(data.availablePeriods)) {
+      return data.availablePeriods;
+    }
+    // Single report object with period
+    if (data?.period) {
+      return [data.period];
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Discover periods from wallet-reports for multiple user IDs, merge results.
+ */
+export async function discoverWalletPeriodsMultiUser(
+  address: string,
+  userIds: string[]
+): Promise<string[]> {
+  const results = await Promise.allSettled(
+    userIds.map((uid) => discoverWalletPeriods(address, uid))
+  );
+
+  const allPeriods = new Set<string>();
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      for (const p of result.value) {
+        allPeriods.add(p);
+      }
+    }
+  }
+
+  return Array.from(allPeriods).sort();
+}
