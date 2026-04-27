@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserIdentityGate, UserBadge } from "@/components/user-identity";
 
 // Sample addresses to auto-fetch reports for
 const SAMPLE_ADDRESSES = [
@@ -23,7 +24,6 @@ const SAMPLE_ADDRESSES = [
 ];
 
 const USER_PREFS_KEY = "compound-reporting-user-prefs";
-const DEFAULT_USER_ID = "user_123";
 
 type WalletStatus = {
   address: string;
@@ -49,7 +49,7 @@ function loadUserPrefs(): UserPrefs {
   }
 }
 
-function saveUserPrefs(prefs: UserPrefs) {
+function saveUserPrefs(prefs: Partial<UserPrefs>) {
   if (typeof window === "undefined") return;
   try {
     const existing = loadUserPrefs();
@@ -62,7 +62,8 @@ function saveUserPrefs(prefs: UserPrefs) {
 export default function HomePage() {
   const router = useRouter();
 
-  const [userId, setUserId] = useState(DEFAULT_USER_ID);
+  // null = not yet determined (hydrating), "" = not set (show gate), string = set
+  const [userId, setUserId] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [walletStartDate, setWalletStartDate] = useState("2021-04-01");
   const [reportEndMonth, setReportEndMonth] = useState("2021-05");
@@ -70,21 +71,25 @@ export default function HomePage() {
   const [error, setError] = useState("");
 
   const [sampleWallets, setSampleWallets] = useState<WalletStatus[]>([]);
-  const [loadingSamples, setLoadingSamples] = useState(true);
+  const [loadingSamples, setLoadingSamples] = useState(false);
 
   const [activeTab, setActiveTab] = useState<string>("reports");
 
-  // Load user preferences on mount
+  // Hydrate from localStorage on mount
   useEffect(() => {
     const prefs = loadUserPrefs();
-    if (prefs.userId) setUserId(prefs.userId);
+    setUserId(prefs.userId || "");
     if (prefs.lastAddress) setAddress(prefs.lastAddress);
     if (prefs.lastWalletStartDate) setWalletStartDate(prefs.lastWalletStartDate);
     if (prefs.lastReportEndMonth) setReportEndMonth(prefs.lastReportEndMonth);
   }, []);
 
-  // Fetch reports for all sample addresses in parallel
+  // Fetch sample wallet catalog whenever userId becomes known
   useEffect(() => {
+    if (!userId) return;
+
+    setLoadingSamples(true);
+
     async function fetchSampleWallets() {
       const results = await Promise.all(
         SAMPLE_ADDRESSES.map(async (addr): Promise<WalletStatus> => {
@@ -115,10 +120,22 @@ export default function HomePage() {
     }
 
     fetchSampleWallets();
-  }, []);
+  }, [userId]);
+
+  const handleIdentityConfirm = (confirmedId: string) => {
+    setUserId(confirmedId);
+    saveUserPrefs({ userId: confirmedId });
+  };
+
+  const handleSwitchUser = () => {
+    setUserId("");
+    setSampleWallets([]);
+  };
 
   const handleViewReport = (wallet: WalletStatus, period: string) => {
-    router.push(`/activity/${wallet.address}?period=${period}&userId=${encodeURIComponent(userId)}`);
+    router.push(
+      `/activity/${wallet.address}?period=${encodeURIComponent(period)}&userId=${encodeURIComponent(userId!)}`
+    );
   };
 
   const handleIndexAddress = (addr: string) => {
@@ -136,51 +153,40 @@ export default function HomePage() {
       setError("Please enter an Ethereum address");
       return;
     }
-
     if (!isValidAddress(address)) {
       setError("Please enter a valid Ethereum address (0x...)");
       return;
     }
-
     if (!/^\d{4}-\d{2}-\d{2}$/.test(walletStartDate)) {
       setError("Wallet start date must be YYYY-MM-DD");
       return;
     }
-
     if (!/^\d{4}-\d{2}$/.test(reportEndMonth)) {
       setError("Report end month must be YYYY-MM");
       return;
     }
 
-    // Save user preferences
-    saveUserPrefs({
-      userId,
-      lastAddress: address,
-      lastWalletStartDate: walletStartDate,
-      lastReportEndMonth: reportEndMonth,
-    });
-
+    saveUserPrefs({ lastAddress: address, lastWalletStartDate: walletStartDate, lastReportEndMonth: reportEndMonth });
     setLoading(true);
 
     try {
       // Check if wallet already has this period indexed
       const catalogRes = await fetch(
-        `/api/indexing/wallet-catalog?address=${encodeURIComponent(address.toLowerCase())}`,
+        `/api/indexing/wallet-catalog?address=${encodeURIComponent(address.toLowerCase())}&userId=${encodeURIComponent(userId!)}`,
         { cache: "no-store" }
       );
 
       if (catalogRes.ok) {
         const catalogData = await catalogRes.json();
         const availablePeriods: string[] = catalogData.availablePeriods || [];
-
-        // If period already exists, go directly to report view
         if (availablePeriods.includes(reportEndMonth)) {
-          router.push(`/activity/${address.toLowerCase()}?period=${reportEndMonth}`);
+          router.push(
+            `/activity/${address.toLowerCase()}?period=${reportEndMonth}&userId=${encodeURIComponent(userId!)}`
+          );
           return;
         }
       }
 
-      // Period not found or wallet not indexed, create new indexing job
       const response = await fetch("/api/indexing/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -196,19 +202,13 @@ export default function HomePage() {
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to create indexing job");
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create indexing job");
-      }
-
-      const nextUrl = new URL(
-        `/activity/${address.toLowerCase()}`,
-        window.location.origin
-      );
-
+      const nextUrl = new URL(`/activity/${address.toLowerCase()}`, window.location.origin);
       nextUrl.searchParams.set("jobId", data.jobId);
       nextUrl.searchParams.set("walletId", data.walletId);
       nextUrl.searchParams.set("period", reportEndMonth);
+      nextUrl.searchParams.set("userId", userId!);
 
       router.push(`${nextUrl.pathname}${nextUrl.search}`);
     } catch (err) {
@@ -220,13 +220,26 @@ export default function HomePage() {
 
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
+  // Not yet hydrated
+  if (userId === null) return null;
+
+  // Show identity gate if no userId set
+  if (userId === "") {
+    return <UserIdentityGate onConfirm={handleIdentityConfirm} />;
+  }
+
   return (
     <div className="container mx-auto max-w-3xl px-4 py-10">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight">Compound Reporting</h1>
-        <p className="mt-2 text-muted-foreground">
-          View existing reports or start a new indexing request
-        </p>
+      <div className="mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Compound Reporting</h1>
+            <p className="mt-1 text-muted-foreground">
+              View existing reports or start a new indexing request
+            </p>
+          </div>
+          <UserBadge userId={userId} onSwitch={handleSwitchUser} />
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -308,22 +321,8 @@ export default function HomePage() {
                 Enter a wallet and period to start backend indexing and reconciliation.
               </CardDescription>
             </CardHeader>
-
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
-                <Field>
-                  <FieldLabel>User ID</FieldLabel>
-                  <Input
-                    value={userId}
-                    onChange={(e) => {
-                      setUserId(e.target.value);
-                      saveUserPrefs({ userId: e.target.value });
-                    }}
-                    placeholder="user_123"
-                    className="font-mono"
-                  />
-                </Field>
-
                 <Field>
                   <FieldLabel>Ethereum Address</FieldLabel>
                   <Input
@@ -358,7 +357,6 @@ export default function HomePage() {
                       placeholder="YYYY-MM-DD"
                     />
                   </Field>
-
                   <Field>
                     <FieldLabel>Report End Month</FieldLabel>
                     <Input
@@ -369,11 +367,11 @@ export default function HomePage() {
                   </Field>
                 </div>
 
-                {error ? (
+                {error && (
                   <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {error}
                   </div>
-                ) : null}
+                )}
 
                 <div className="flex flex-wrap gap-3">
                   <Button type="submit" disabled={loading}>
