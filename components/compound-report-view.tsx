@@ -376,12 +376,12 @@ export function CompoundReportView({ report, loading = false }: Props) {
               </table>
             </div>
 
-            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded">
-              <h4 className="font-semibold text-amber-700 dark:text-amber-400 mb-1">JE Tab Note</h4>
+            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded">
+              <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-1">JE Tab Note</h4>
               <p className="text-xs text-muted-foreground">
-                JE entries are calculated from normalizedEvents using hardcoded asset prices 
-                (WETH=$3200, WBTC=$65000, etc.) and simulated monthly volatility for Fair Value adjustments. 
-                These are NOT from actual on-chain USD values if the backend doesn&apos;t provide amountUsd.
+                JE entries are calculated from normalizedEvents. USD values come from the backend&apos;s 
+                amountUsd field. Fair Value adjustments use user-supplied principal market prices 
+                (set in the &quot;Principal Market Prices&quot; panel on the JE tab).
               </p>
             </div>
           </CardContent>

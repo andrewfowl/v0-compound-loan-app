@@ -15,8 +15,6 @@ export async function kryptosFetch<T>(path: string, init: RequestInit = {}): Pro
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
   const url = `${KRYPTOS_API_BASE}${normalizedPath}`
 
-  console.log("[v0] Kryptos request URL:", url)
-
   const res = await fetch(url, {
     ...init,
     headers: {

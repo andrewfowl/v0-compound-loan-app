@@ -18,7 +18,6 @@ import {
   ArrowRight, 
   TrendingUp,
   Clock,
-  CheckCircle2,
   AlertCircle,
 } from "lucide-react";
 

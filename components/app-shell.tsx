@@ -4,6 +4,7 @@ import * as React from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 const USER_PREFS_KEY = "compound-reporting-user-prefs"
 
@@ -53,7 +54,9 @@ export function AppShell({ children }: AppShellProps) {
           <AppHeader />
           <main className="flex-1 overflow-auto">
             <div className="mx-auto h-full w-full max-w-7xl p-6">
-              {children}
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
             </div>
           </main>
         </SidebarInset>
