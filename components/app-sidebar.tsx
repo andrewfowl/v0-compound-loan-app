@@ -10,6 +10,12 @@ import {
   LogOut,
   User,
   ChevronDown,
+  TrendingUp,
+  Receipt,
+  BookOpen,
+  Table2,
+  DollarSign,
+  Wallet,
 } from "lucide-react"
 
 import {
@@ -37,18 +43,45 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-const mainNavItems = [
+const workspaceNavItems = [
   {
     title: "Dashboard",
     url: "/",
     icon: Home,
-    description: "Overview and quick actions",
+    description: "Portfolio overview",
   },
   {
-    title: "Activity",
-    url: "/activity",
-    icon: FileText,
-    description: "Wallet transaction reports",
+    title: "Positions",
+    url: "/positions",
+    icon: TrendingUp,
+    description: "Borrow & supply positions",
+  },
+  {
+    title: "Transactions",
+    url: "/transactions",
+    icon: Receipt,
+    description: "Onchain transaction ledger",
+  },
+]
+
+const accountingNavItems = [
+  {
+    title: "Journal Entries",
+    url: "/journal-entries",
+    icon: BookOpen,
+    description: "JEs and working papers",
+  },
+  {
+    title: "Summary Schedules",
+    url: "/schedules",
+    icon: Table2,
+    description: "Loan & collateral rollforward",
+  },
+  {
+    title: "Pricing Data",
+    url: "/pricing",
+    icon: DollarSign,
+    description: "ASC 820 price sources",
   },
 ]
 
@@ -123,7 +156,7 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5 px-2">
-              {mainNavItems.map((item) => (
+              {workspaceNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -148,6 +181,30 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
           <SidebarGroupLabel className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
             Accounting
           </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5 px-2">
+              {accountingNavItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                    className="h-9 px-3 text-sm transition-colors"
+                  >
+                    <Link href={item.url} className="flex items-center gap-3">
+                      <item.icon className="size-4 shrink-0" />
+                      <span className="flex-1">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="my-2 mx-3 bg-sidebar-border/40" />
+
+        <SidebarGroup className="px-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5 px-2">
               {settingsNavItems.map((item) => (
