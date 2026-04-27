@@ -470,46 +470,70 @@ export function groupLoanLedgerByPeriod(
   ledger: LoanLedgerEntry[],
   period: Period
 ): PeriodGroup<LoanLedgerEntry>[] {
-  const groups = new Map<string, LoanLedgerEntry[]>()
-  for (const row of ledger) {
+  // Re-thread start/end so each detail row's start = prior row's end (per asset),
+  // then build period groups whose subtotal start = first row start, end = start + sum(middle cols).
+  const assetEnd: Record<string, number> = {}
+  const relinked = ledger.map((row) => {
+    const start = assetEnd[row.token] ?? row.start
+    const end = start + row.proceeds + row.accruals - row.liquidated - row.payments
+    assetEnd[row.token] = end
+    return { ...row, start, end }
+  })
+
+  const groups = new Map<string, typeof relinked>()
+  for (const row of relinked) {
     const key = getPeriodKey(row.date, period)
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(row)
   }
-  return Array.from(groups.entries()).map(([key, rows]) => ({
-    periodLabel: getPeriodLabel(key, period),
-    rows,
-    subtotals: {
-      startBalance: rows[0]?.start ?? 0,
-      proceeds: rows.reduce((s, r) => s + r.proceeds, 0),
-      accruals: rows.reduce((s, r) => s + r.accruals, 0),
-      liquidated: rows.reduce((s, r) => s + r.liquidated, 0),
-      payments: rows.reduce((s, r) => s + r.payments, 0),
-      endBalance: rows[rows.length - 1]?.end ?? 0,
-    },
-  }))
+
+  return Array.from(groups.entries()).map(([key, rows]) => {
+    const startBalance = rows[0]?.start ?? 0
+    const proceeds   = rows.reduce((s, r) => s + r.proceeds, 0)
+    const accruals   = rows.reduce((s, r) => s + r.accruals, 0)
+    const liquidated = rows.reduce((s, r) => s + r.liquidated, 0)
+    const payments   = rows.reduce((s, r) => s + r.payments, 0)
+    const endBalance = startBalance + proceeds + accruals - liquidated - payments
+    return {
+      periodLabel: getPeriodLabel(key, period),
+      rows,
+      subtotals: { startBalance, proceeds, accruals, liquidated, payments, endBalance },
+    }
+  })
 }
 
 export function groupCollateralLedgerByPeriod(
   ledger: CollateralLedgerEntry[],
   period: Period
 ): PeriodGroup<CollateralLedgerEntry>[] {
-  const groups = new Map<string, CollateralLedgerEntry[]>()
-  for (const row of ledger) {
+  // Re-thread start/end so each detail row's start = prior row's end (per asset),
+  // then build period groups whose subtotal start = first row start, end = start + sum(middle cols).
+  const assetEnd: Record<string, number> = {}
+  const relinked = ledger.map((row) => {
+    const start = assetEnd[row.token] ?? row.start
+    const end = start + row.provided + row.accruals - row.liquidated - row.reclaimed
+    assetEnd[row.token] = end
+    return { ...row, start, end }
+  })
+
+  const groups = new Map<string, typeof relinked>()
+  for (const row of relinked) {
     const key = getPeriodKey(row.date, period)
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(row)
   }
-  return Array.from(groups.entries()).map(([key, rows]) => ({
-    periodLabel: getPeriodLabel(key, period),
-    rows,
-    subtotals: {
-      startBalance: rows[0]?.start ?? 0,
-      provided: rows.reduce((s, r) => s + r.provided, 0),
-      accruals: rows.reduce((s, r) => s + r.accruals, 0),
-      liquidated: rows.reduce((s, r) => s + r.liquidated, 0),
-      reclaimed: rows.reduce((s, r) => s + r.reclaimed, 0),
-      endBalance: rows[rows.length - 1]?.end ?? 0,
-    },
-  }))
+
+  return Array.from(groups.entries()).map(([key, rows]) => {
+    const startBalance = rows[0]?.start ?? 0
+    const provided   = rows.reduce((s, r) => s + r.provided, 0)
+    const accruals   = rows.reduce((s, r) => s + r.accruals, 0)
+    const liquidated = rows.reduce((s, r) => s + r.liquidated, 0)
+    const reclaimed  = rows.reduce((s, r) => s + r.reclaimed, 0)
+    const endBalance = startBalance + provided + accruals - liquidated - reclaimed
+    return {
+      periodLabel: getPeriodLabel(key, period),
+      rows,
+      subtotals: { startBalance, provided, accruals, liquidated, reclaimed, endBalance },
+    }
+  })
 }
