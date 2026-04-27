@@ -31,13 +31,18 @@ export default function HomePage() {
       try {
         const res = await fetch("/api/indexing/wallets", { cache: "no-store" });
         const data = await res.json();
+        console.log("[v0] Wallets API response:", { status: res.status, data });
         if (res.ok && Array.isArray(data)) {
           setWallets(data);
         } else if (res.ok && data.wallets) {
           setWallets(data.wallets);
+        } else if (res.ok && data.data && Array.isArray(data.data)) {
+          setWallets(data.data);
+        } else {
+          console.log("[v0] Unexpected wallets response format");
         }
-      } catch {
-        // silently fail - wallets list is optional
+      } catch (err) {
+        console.log("[v0] Failed to fetch wallets:", err);
       } finally {
         setLoadingWallets(false);
       }
@@ -166,18 +171,6 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-3">
               <Button type="submit" disabled={loading}>
                 {loading ? "Starting..." : "Start Indexing"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setAddress("0xd043c56861f3e80b2c5580d7044a6771f802565d");
-                  setWalletStartDate("2021-04-01");
-                  setReportEndMonth("2021-05");
-                }}
-              >
-                Fill sample wallet
               </Button>
             </div>
           </form>

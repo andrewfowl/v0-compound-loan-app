@@ -4,21 +4,28 @@ const BACKEND_API_BASE_URL = process.env.BACKEND_API_BASE_URL;
 const BACKEND_PROXY_USER_ID =
   process.env.BACKEND_PROXY_USER_ID || "frontend-demo";
 
-if (!BACKEND_API_BASE_URL) {
-  throw new Error("Missing BACKEND_API_BASE_URL");
-}
-
 type BackendFetchOptions = {
   method?: "GET" | "POST";
   body?: unknown;
 };
 
+function ensureBackendUrl() {
+  if (!BACKEND_API_BASE_URL) {
+    throw new Error("Missing BACKEND_API_BASE_URL environment variable");
+  }
+  return BACKEND_API_BASE_URL;
+}
+
 async function backendFetch(path: string, options: BackendFetchOptions = {}) {
+  const baseUrl = ensureBackendUrl();
   const headers = new Headers();
   headers.set("Content-Type", "application/json");
   headers.set("x-user-id", BACKEND_PROXY_USER_ID);
 
-  const response = await fetch(`${BACKEND_API_BASE_URL}${path}`, {
+  const fullUrl = `${baseUrl}${path}`;
+  console.log("[v0] Backend fetch:", { method: options.method || "GET", url: fullUrl });
+
+  const response = await fetch(fullUrl, {
     method: options.method || "GET",
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -29,6 +36,8 @@ async function backendFetch(path: string, options: BackendFetchOptions = {}) {
   const payload = contentType.includes("application/json")
     ? await response.json().catch(() => null)
     : await response.text().catch(() => "");
+
+  console.log("[v0] Backend response:", { status: response.status, url: fullUrl, payload });
 
   if (!response.ok) {
     const message =
