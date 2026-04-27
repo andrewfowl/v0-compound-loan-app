@@ -20,19 +20,6 @@ const LIQUIDATION_THRESHOLD = 0.80
 const SAFE_TARGET = 0.65
 const MONITOR_THRESHOLD = 0.50
 
-// Simulated asset prices (would come from oracle in production)
-const ASSET_PRICES: Record<string, number> = {
-  WETH: 3200, ETH: 3200, WBTC: 65000, BTC: 65000,
-  USDC: 1, USDT: 1, DAI: 1, COMP: 85, UNI: 12, LINK: 18,
-}
-
-// Monthly volatility for FV adjustments (stablecoins = 0)
-const ASSET_MONTHLY_VOL: Record<string, number> = {
-  WETH: 0.08, ETH: 0.08, WBTC: 0.06, BTC: 0.06,
-  COMP: 0.12, UNI: 0.15, LINK: 0.10,
-  USDC: 0, USDT: 0, DAI: 0,
-}
-
 const ITEM_LABELS: Record<AccountType, Partial<Record<ActivityType, string>>> = {
   collateral: {
     deposit: "Deposit",
@@ -61,6 +48,13 @@ function computeRiskLevel(debtUsd: number, collateralUsd: number): RiskLevel {
   return "healthy"
 }
 
+/**
+ * Build a CompoundReport from normalized events.
+ * 
+ * IMPORTANT: This function uses the amountUsd field directly from the events.
+ * If amountUsd is 0 or missing, the USD values in reports will be incorrect.
+ * The backend should provide accurate USD values; we do NOT apply hardcoded prices.
+ */
 export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
   const collateralSummary: Record<string, Record<string, number>> = {
     deposited: {},
@@ -90,10 +84,9 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
   )
 
   for (const e of sorted) {
-    const amt = parseFloat(e.amount)
-    const amtUsd = parseFloat(e.amountUsd)
+    const amt = parseFloat(e.amount) || 0
+    const amtUsd = parseFloat(e.amountUsd) || 0
     const date = formatDate(e.timestamp)
-    const price = ASSET_PRICES[e.asset] ?? (amtUsd / amt || 1)
 
     if (e.accountType === "collateral") {
       collTokens.add(e.asset)
@@ -118,6 +111,7 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
         runningCollateralUsd += amtUsd
       }
 
+      // Collateral balance: Start + Provided + Accruals - Liquidated - Reclaimed = End
       const end = start + provided + accruals - liquidated - reclaimed
       collateralBalances[e.asset] = end
       const riskAtTime = computeRiskLevel(runningDebtUsd, runningCollateralUsd)
@@ -158,7 +152,9 @@ export function buildCompoundReport(events: CompoundEvent[]): CompoundReport {
         runningDebtUsd += amtUsd
       }
 
-      const end = start - proceeds - accruals + liquidated + payments
+      // Loan balance: Start + Proceeds + Accruals - Liquidated - Payments = End
+      // (Debt increases with borrows/interest, decreases with repayments/liquidations)
+      const end = start + proceeds + accruals - liquidated - payments
       loanBalances[e.asset] = end
       const riskAtTime = computeRiskLevel(runningDebtUsd, runningCollateralUsd)
 
@@ -219,8 +215,6 @@ function buildBorrowerRecon(
   for (const [monthKey, monthEvents] of eventsByMonth) {
     const [y, m] = monthKey.split("-").map(Number)
     const monthName = new Date(y, m - 1).toLocaleString("en-US", { month: "long" })
-    const lastDay = new Date(y, m, 0).getDate()
-    const lastDayIso = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
     
     const entries: JournalEntry[] = []
     const openingDebt = runningDebt
@@ -228,7 +222,7 @@ function buildBorrowerRecon(
     let totalBorrowed = 0, totalRepaid = 0, totalInterest = 0, totalLiquidated = 0
 
     for (const e of monthEvents) {
-      const amtUsd = parseFloat(e.amountUsd)
+      const amtUsd = parseFloat(e.amountUsd) || 0
       const date = formatDate(e.timestamp)
 
       if (e.accountType === "debt") {
@@ -293,8 +287,8 @@ function buildBorrowerRecon(
             date,
             timestamp: e.timestamp,
             description: `Deposit ${e.asset} collateral`,
-            debitAccount: "Collateral Deposited",
-            creditAccount: "Crypto Holdings",
+            debitAccount: `Collateral Crypto (${e.asset})`,
+            creditAccount: `Crypto (${e.asset})`,
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
@@ -305,8 +299,8 @@ function buildBorrowerRecon(
             date,
             timestamp: e.timestamp,
             description: `Withdraw ${e.asset} collateral`,
-            debitAccount: "Crypto Holdings",
-            creditAccount: "Collateral Deposited",
+            debitAccount: `Crypto (${e.asset})`,
+            creditAccount: `Collateral Crypto (${e.asset})`,
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
@@ -318,7 +312,7 @@ function buildBorrowerRecon(
             timestamp: e.timestamp,
             description: `Collateral ${e.asset} seized`,
             debitAccount: "Loss on Liquidation",
-            creditAccount: "Collateral Deposited",
+            creditAccount: `Collateral Crypto (${e.asset})`,
             usdAmount: amtUsd,
             asset: e.asset,
             computed: false,
@@ -329,7 +323,7 @@ function buildBorrowerRecon(
             date,
             timestamp: e.timestamp,
             description: `Interest Income – ${e.asset}`,
-            debitAccount: "Collateral Deposited",
+            debitAccount: `Collateral Crypto (${e.asset})`,
             creditAccount: "Interest Income",
             usdAmount: amtUsd,
             asset: e.asset,
@@ -339,36 +333,7 @@ function buildBorrowerRecon(
       }
     }
 
-    // Fair Value adjustments (simulated)
-    let embeddedDerivative = 0
-    Object.entries(debtUnits).forEach(([asset, units]) => {
-      if (Math.abs(units) <= 0.0001) return
-      const vol = ASSET_MONTHLY_VOL[asset] || 0
-      if (vol === 0) return
-      
-      // Simulate a random monthly price move based on volatility
-      const monthSeed = y * 12 + m + asset.charCodeAt(0)
-      const pseudoRandom = Math.sin(monthSeed) * 0.5 + 0.5
-      const monthlyRate = (pseudoRandom - 0.5) * 2 * vol
-      
-      const price = ASSET_PRICES[asset] || 1
-      const fvChange = Math.abs(units) * price * monthlyRate
-      if (Math.abs(fvChange) < 0.01) return
-      
-      const isLoss = fvChange > 0
-      embeddedDerivative += fvChange
-      
-      entries.push({
-        date: `${monthName.slice(0, 3)} ${lastDay}, ${y}`,
-        timestamp: lastDayIso,
-        description: `FV ${isLoss ? "Loss" : "Gain"} – ${asset} (${monthlyRate >= 0 ? "+" : ""}${(monthlyRate * 100).toFixed(2)}%)`,
-        debitAccount: isLoss ? `Fair Value Loss – ${asset}` : "Crypto Borrowings",
-        creditAccount: isLoss ? "Crypto Borrowings" : `Fair Value Gain – ${asset}`,
-        usdAmount: Math.abs(fvChange),
-        asset,
-        computed: true,
-      })
-    })
+    // Note: We no longer add Fair Value adjustment entries since they were based on hardcoded prices
 
     if (entries.length > 0 || openingDebt > 0) {
       const ltv = runningCollateral > 0 ? runningDebt / runningCollateral : 0
@@ -387,22 +352,24 @@ function buildBorrowerRecon(
         totalRepaid,
         totalInterest,
         totalLiquidated,
-        embeddedDerivative,
+        embeddedDerivative: 0, // No longer computing FV adjustments
         liquidationRisk,
       })
     }
   }
 
-  // Build position risk info
+  // Build position risk info using USD totals from events (no hardcoded prices)
   const ltv = finalCollateralUsd > 0 ? finalDebtUsd / finalCollateralUsd : 0
   const positions: PositionRisk[] = Object.entries(debtUnits)
     .filter(([, units]) => Math.abs(units) > 0.0001)
     .map(([asset, units]) => {
-      const price = ASSET_PRICES[asset] || 1
-      const debtUsd = Math.abs(units) * price
-      const debtShare = finalDebtUsd > 0 ? debtUsd / finalDebtUsd : 1
-      const collateralUsd = finalCollateralUsd * debtShare
+      // Calculate debt USD proportionally from the total
+      const totalUnits = Object.values(debtUnits).reduce((s, u) => s + Math.abs(u), 0)
+      const proportion = totalUnits > 0 ? Math.abs(units) / totalUnits : 1
+      const debtUsd = finalDebtUsd * proportion
+      const collateralUsd = finalCollateralUsd * proportion
       const posLtv = collateralUsd > 0 ? debtUsd / collateralUsd : debtUsd > 0 ? Infinity : 0
+      const price = Math.abs(units) > 0 ? debtUsd / Math.abs(units) : 0
 
       const riskLevel = computeRiskLevel(debtUsd, collateralUsd)
       const collateralToAddUsd = Math.max(0, debtUsd / SAFE_TARGET - collateralUsd)

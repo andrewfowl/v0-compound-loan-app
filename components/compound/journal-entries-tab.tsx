@@ -178,16 +178,13 @@ export function JournalEntriesTab({ borrowerRecon }: JournalEntriesTabProps) {
       {/* Data Source + Legend */}
       <div className="flex flex-col gap-2 text-xs text-muted-foreground border rounded-lg p-3 bg-muted/20">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-amber-600 dark:text-amber-400">Warning:</span>
-          <span>JE entries are <strong>calculated</strong> from <code className="bg-muted px-1 rounded">normalizedEvents</code>. USD values use hardcoded prices (WETH=$3200, WBTC=$65000), NOT actual on-chain values.</span>
+          <span className="font-semibold">Data Source:</span>
+          <span>JE entries are calculated from <code className="bg-muted px-1 rounded">normalizedEvents</code>. USD values come from <code className="bg-muted px-1 rounded">amountUsd</code> field in each event.</span>
         </div>
         <div className="flex items-center gap-4 border-t pt-2">
           <span className="flex items-center gap-1">
             <Info className="h-3 w-3" />
             Hover over descriptions and amounts to see calculation details
-          </span>
-          <span className="border-l pl-4">
-            <span className="italic">Italic rows</span> = computed/estimated entries (FV adjustments)
           </span>
         </div>
       </div>
