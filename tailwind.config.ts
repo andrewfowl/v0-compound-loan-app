@@ -84,6 +84,9 @@ const config: Config = {
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
       },
+      fontFamily: {
+        'mono-data': ['ui-monospace', 'SFMono-Regular', 'Courier New', 'monospace'],
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },

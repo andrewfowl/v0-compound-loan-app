@@ -7,13 +7,8 @@ import {
   FileText,
   Home,
   Settings,
-  Building2,
   LogOut,
   User,
-  Bell,
-  CreditCard,
-  Shield,
-  Plus,
   ChevronDown,
 } from "lucide-react"
 
@@ -79,81 +74,66 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="border-b border-sidebar-border/50">
+    <Sidebar collapsible="icon" className="border-r">
+      <SidebarHeader className="border-b border-sidebar-border p-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="h-12 px-3 data-[state=open]:bg-sidebar-accent/50"
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
-                    <Building2 className="size-4" />
+                  <div className="flex size-8 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
+                    CLA
                   </div>
                   <div className="grid flex-1 text-left leading-tight">
-                    <span className="truncate text-sm font-semibold tracking-tight">Compound</span>
-                    <span className="truncate text-xs text-muted-foreground">Public Accounting</span>
+                    <span className="truncate text-sm font-semibold tracking-tight">CLA Finance</span>
+                    <span className="truncate text-xs text-sidebar-foreground/60">Accounting</span>
                   </div>
-                  <ChevronDown className="ml-auto size-4 text-muted-foreground" />
+                  <ChevronDown className="size-4 text-sidebar-foreground/40" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-64"
-                align="start"
-                side="bottom"
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              <DropdownMenuContent className="w-64" align="start" side="bottom" sideOffset={4}>
+                <DropdownMenuLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-2 py-2">
                   Workspaces
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="gap-3 p-3">
-                    <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                      <Building2 className="size-4" />
+                  <DropdownMenuItem className="gap-3 px-3 py-2.5">
+                    <div className="flex size-8 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
+                      CLA
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Compound</p>
-                      <p className="text-xs text-muted-foreground">Public Accounting</p>
+                      <p className="text-sm font-medium">CLA Finance</p>
+                      <p className="text-xs text-muted-foreground">Accounting</p>
                     </div>
-                    <div className="size-2 rounded-full bg-primary" />
+                    <div className="size-2 rounded-full bg-sidebar-primary/80" />
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-muted-foreground">
-                  <Plus className="size-4" />
-                  <span>Add workspace</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
-        <SidebarGroup className="py-4">
-          <SidebarGroupLabel className="px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-            Main
+      <SidebarContent className="px-0 py-4">
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+            Workspace
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className="gap-0.5 px-2">
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
-                    className="h-9 px-3 transition-colors"
+                    className="h-9 px-3 text-sm transition-colors"
                   >
                     <Link href={item.url} className="flex items-center gap-3">
                       <item.icon className="size-4 shrink-0" />
-                      <span className="flex-1 truncate text-sm">{item.title}</span>
-                      {item.badge && (
-                        <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-2xs font-medium text-primary">
-                          {item.badge}
-                        </span>
-                      )}
+                      <span className="flex-1">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -162,25 +142,25 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator className="mx-3" />
+        <SidebarSeparator className="my-2 mx-3 bg-sidebar-border/40" />
 
-        <SidebarGroup className="py-4">
-          <SidebarGroupLabel className="px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-            Support
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+            Accounting
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className="gap-0.5 px-2">
               {settingsNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
-                    className="h-9 px-3 transition-colors"
+                    className="h-9 px-3 text-sm transition-colors"
                   >
                     <Link href={item.url} className="flex items-center gap-3">
                       <item.icon className="size-4 shrink-0" />
-                      <span className="text-sm">{item.title}</span>
+                      <span className="flex-1">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -190,78 +170,56 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/50 p-2">
+      <SidebarFooter className="border-t border-sidebar-border p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="h-10 data-[state=open]:bg-sidebar-accent/50"
                 >
-                  <Avatar className="size-8 rounded-md">
-                    <AvatarFallback className="rounded-md bg-gradient-to-br from-primary/80 to-primary text-primary-foreground text-xs font-medium">
-                      {userId.slice(0, 2).toUpperCase()}
+                  <Avatar className="size-8 rounded">
+                    <AvatarFallback className="rounded bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
+                      {userId.slice(0, 1).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left leading-tight">
-                    <span className="truncate text-sm font-medium">{userId}</span>
-                    <span className="truncate text-xs text-muted-foreground">Accountant</span>
+                    <span className="truncate text-sm font-medium">{userId.split("_")[1]?.slice(0, 8) || userId.slice(0, 8)}</span>
+                    <span className="truncate text-xs text-sidebar-foreground/60">Accountant</span>
                   </div>
-                  <ChevronDown className="ml-auto size-4 text-muted-foreground" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-64"
-                side="bottom"
-                align="end"
-                sideOffset={4}
-              >
+              <DropdownMenuContent className="w-64" side="top" align="end" sideOffset={4}>
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-3 px-2 py-3">
-                    <Avatar className="size-10 rounded-md">
-                      <AvatarFallback className="rounded-md bg-gradient-to-br from-primary/80 to-primary text-primary-foreground font-medium">
-                        {userId.slice(0, 2).toUpperCase()}
+                    <Avatar className="size-10 rounded">
+                      <AvatarFallback className="rounded bg-sidebar-primary text-sidebar-primary-foreground font-semibold">
+                        {userId.slice(0, 1).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 leading-tight">
-                      <span className="font-medium">{userId}</span>
+                      <span className="font-medium text-sm">{userId}</span>
                       <span className="text-xs text-muted-foreground">accountant@company.com</span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="gap-3 py-2">
+                  <DropdownMenuItem className="gap-3 py-2 text-sm">
                     <User className="size-4 text-muted-foreground" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-3 py-2">
-                    <CreditCard className="size-4 text-muted-foreground" />
-                    <span>Billing</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-3 py-2">
-                    <Bell className="size-4 text-muted-foreground" />
-                    <span>Notifications</span>
-                    <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-destructive text-2xs font-medium text-destructive-foreground">
-                      3
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-3 py-2">
-                    <Shield className="size-4 text-muted-foreground" />
-                    <span>Security</span>
+                  <DropdownMenuItem
+                    className="gap-3 py-2 text-sm text-muted-foreground"
+                    onClick={() => onUserSwitch?.(userId === "user_123" ? "frontend-demo" : "user_123")}
+                  >
+                    <span className="size-4" />
+                    <span>Switch User</span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="gap-3 py-2 text-muted-foreground"
-                  onClick={() => onUserSwitch?.(userId === "user_123" ? "frontend-demo" : "user_123")}
-                >
-                  <span className="size-4" />
-                  <span>Switch to {userId === "user_123" ? "frontend-demo" : "user_123"}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-3 py-2 text-destructive focus:text-destructive">
+                <DropdownMenuItem className="gap-3 py-2 text-sm text-destructive focus:text-destructive">
                   <LogOut className="size-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
