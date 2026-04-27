@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatUsd } from "@/lib/compound/format"
+import { Badge } from "@/components/ui/badge"
 
 interface SummaryTabProps {
   collateralSummary: Record<string, Record<string, number>>
@@ -11,7 +12,14 @@ interface SummaryTabProps {
 
 export function SummaryTab({ collateralSummary, debtSummary, collateralTokens, debtTokens }: SummaryTabProps) {
   return (
-    <div className="grid md:grid-cols-2 gap-6">
+    <div className="space-y-4">
+      {/* Data Source Indicator */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg p-2 bg-muted/20">
+        <Badge variant="outline" className="text-xs">Data Source</Badge>
+        <span>Calculated from <code className="bg-muted px-1 rounded">normalizedEvents</code> via <code className="bg-muted px-1 rounded">buildCompoundReport()</code></span>
+      </div>
+      
+      <div className="grid md:grid-cols-2 gap-6">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-center text-lg border-b pb-2">COLLATERAL</CardTitle>
@@ -71,6 +79,7 @@ export function SummaryTab({ collateralSummary, debtSummary, collateralTokens, d
           </Table>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

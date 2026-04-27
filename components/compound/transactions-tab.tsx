@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { formatAddress, formatDate, formatUsd, formatCrypto } from "@/lib/compound/format"
 import type { CompoundEvent } from "@/lib/compound/types"
 
@@ -9,6 +10,13 @@ interface TransactionsTabProps {
 
 export function TransactionsTab({ events }: TransactionsTabProps) {
   return (
+    <div className="space-y-4">
+      {/* Data Source Indicator */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg p-2 bg-muted/20">
+        <Badge variant="outline" className="text-xs">Data Source</Badge>
+        <span>Transformed from <code className="bg-muted px-1 rounded">normalizedEvents</code> via <code className="bg-muted px-1 rounded">transformToCompoundEvents()</code></span>
+      </div>
+      
     <Card>
       <CardHeader>
         <CardTitle>Transaction History</CardTitle>
@@ -71,5 +79,6 @@ export function TransactionsTab({ events }: TransactionsTabProps) {
         </div>
       </CardContent>
     </Card>
+    </div>
   )
 }

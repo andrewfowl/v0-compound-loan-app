@@ -4,6 +4,7 @@ import { useState, useMemo, Fragment } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { groupCollateralLedgerByPeriod } from "@/lib/compound/report-builder"
 import { formatLedgerValue } from "@/lib/compound/format"
 import type { CollateralLedgerEntry, Period, BorrowerRecon } from "@/lib/compound/types"
@@ -13,6 +14,7 @@ import { CollateralRiskBanner } from "./collateral-risk-banner"
 interface CollateralTabProps {
   collateralLedger: CollateralLedgerEntry[]
   borrowerRecon: BorrowerRecon
+  dataSource?: "backend" | "calculated"
 }
 
 function SeizureRiskBadge({ risk, item }: { risk: string; item: string }) {
@@ -29,7 +31,7 @@ function SeizureRiskBadge({ risk, item }: { risk: string; item: string }) {
   )
 }
 
-export function CollateralTab({ collateralLedger, borrowerRecon }: CollateralTabProps) {
+export function CollateralTab({ collateralLedger, borrowerRecon, dataSource = "calculated" }: CollateralTabProps) {
   const [period, setPeriod] = useState<Period>("monthly")
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -48,6 +50,18 @@ export function CollateralTab({ collateralLedger, borrowerRecon }: CollateralTab
 
   return (
     <>
+      {/* Data Source Indicator */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg p-2 bg-muted/20 mb-4">
+        <Badge variant={dataSource === "backend" ? "default" : "outline"} className="text-xs">
+          {dataSource === "backend" ? "Backend Data" : "Calculated"}
+        </Badge>
+        <span>
+          {dataSource === "backend" 
+            ? <>From <code className="bg-muted px-1 rounded">reconciliationRows</code> (pre-calculated by backend)</>
+            : <>Calculated from <code className="bg-muted px-1 rounded">normalizedEvents</code> via <code className="bg-muted px-1 rounded">buildCompoundReport()</code></>
+          }
+        </span>
+      </div>
       <CollateralRiskBanner borrowerRecon={borrowerRecon} />
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">

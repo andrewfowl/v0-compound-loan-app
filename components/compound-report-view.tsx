@@ -419,6 +419,7 @@ export function CompoundReportView({ report, loading = false }: Props) {
             <LoanTab
               loanLedger={loanLedger}
               positions={borrowerRecon.positions}
+              dataSource={hasBackendLedger ? "backend" : "calculated"}
             />
           </TabsContent>
 
@@ -426,6 +427,7 @@ export function CompoundReportView({ report, loading = false }: Props) {
             <CollateralTab
               collateralLedger={collateralLedger}
               borrowerRecon={borrowerRecon}
+              dataSource={hasBackendLedger ? "backend" : "calculated"}
             />
           </TabsContent>
 
