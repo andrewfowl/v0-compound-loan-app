@@ -57,12 +57,24 @@ function transformToCompoundEvents(normalizedEvents: GenericRow[]): CompoundEven
     const positionType = String(event.positionType ?? event.position_type ?? "").toLowerCase();
     const activityType = String(event.activityType ?? event.activity_type ?? "").toLowerCase();
     const sourceAction = String(event.sourceAction ?? event.source_action ?? "").toLowerCase();
+    // Also check eventName for liquidation detection
+    const eventNameRaw = String(event.eventName ?? event.event_name ?? "").toLowerCase();
 
     const accountType: "collateral" | "debt" =
       positionType === "collateral" ? "collateral" : "debt";
 
     let activity: CompoundEvent["activity"] = "borrowing";
-    if (activityType === "deposit" || sourceAction.includes("supply") || sourceAction.includes("mint")) {
+    // Check liquidation first (higher priority)
+    if (
+      activityType === "liquidation" ||
+      activityType.includes("liquidat") ||
+      sourceAction.includes("liquidat") ||
+      eventNameRaw.includes("liquidat") ||
+      eventNameRaw === "liquidateborrow" ||
+      eventNameRaw === "absorb"
+    ) {
+      activity = "liquidation";
+    } else if (activityType === "deposit" || sourceAction.includes("supply") || sourceAction.includes("mint")) {
       activity = "deposit";
     } else if (activityType === "redemption" || activityType === "withdraw" || sourceAction.includes("redeem") || sourceAction.includes("withdraw")) {
       activity = "redemption";
@@ -70,8 +82,6 @@ function transformToCompoundEvents(normalizedEvents: GenericRow[]): CompoundEven
       activity = "borrowing";
     } else if (activityType === "repayment" || activityType === "repay" || sourceAction.includes("repay")) {
       activity = "repayment";
-    } else if (activityType === "liquidation" || sourceAction.includes("liquidat")) {
-      activity = "liquidation";
     } else if (activityType === "interest" || activityType.includes("accrual")) {
       activity = "interest";
     }
