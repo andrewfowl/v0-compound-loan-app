@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { SummaryTab } from "@/components/compound/summary-tab";
 import { LoanTab } from "@/components/compound/loan-tab";
 import { CollateralTab } from "@/components/compound/collateral-tab";
 import { TransactionsTab } from "@/components/compound/transactions-tab";
 import { JournalEntriesTab } from "@/components/compound/journal-entries-tab";
+import { CompoundReportViewRaw } from "@/components/compound-report-view-raw";
 import { buildCompoundReport } from "@/lib/compound/report-builder";
 import type { CompoundEvent, CompoundReport } from "@/lib/compound/types";
 
@@ -87,6 +89,7 @@ function transformToCompoundEvents(normalizedEvents: GenericRow[]): CompoundEven
 }
 
 export function CompoundReportView({ report, loading = false }: Props) {
+  const [viewMode, setViewMode] = useState<"calculated" | "raw">("calculated");
   const period = report?.period ?? null;
   
   const normalizedEvents = useMemo(
@@ -105,7 +108,7 @@ export function CompoundReportView({ report, loading = false }: Props) {
     return <Skeleton className="h-[600px] w-full" />;
   }
 
-  if (!period || !compoundReport) {
+  if (!period) {
     return (
       <Card>
         <CardContent className="py-8">
@@ -118,49 +121,86 @@ export function CompoundReportView({ report, loading = false }: Props) {
   }
 
   return (
-    <Tabs defaultValue="summary" className="space-y-4">
-      <TabsList className="flex h-auto flex-wrap gap-2">
-        <TabsTrigger value="summary">Summary</TabsTrigger>
-        <TabsTrigger value="loan">Loan</TabsTrigger>
-        <TabsTrigger value="collateral">Collateral</TabsTrigger>
-        <TabsTrigger value="transactions">Transactions</TabsTrigger>
-        <TabsTrigger value="je">JE</TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      {/* View Mode Toggle */}
+      <div className="flex items-center gap-2 rounded-lg border bg-card p-2">
+        <span className="text-sm font-medium text-muted-foreground mr-2">View Mode:</span>
+        <Button
+          variant={viewMode === "calculated" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setViewMode("calculated")}
+        >
+          Calculated Report
+        </Button>
+        <Button
+          variant={viewMode === "raw" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setViewMode("raw")}
+        >
+          Raw API Data
+        </Button>
+      </div>
 
-      <TabsContent value="summary">
-        <SummaryTab
-          collateralSummary={compoundReport.collateralSummary}
-          debtSummary={compoundReport.debtSummary}
-          collateralTokens={compoundReport.collateralTokens}
-          debtTokens={compoundReport.debtTokens}
-        />
-      </TabsContent>
+      {/* Raw API Data View */}
+      {viewMode === "raw" && <CompoundReportViewRaw report={report} />}
 
-      <TabsContent value="loan">
-        <LoanTab
-          loanLedger={compoundReport.loanLedger}
-          positions={compoundReport.borrowerRecon.positions}
-        />
-      </TabsContent>
+      {/* Calculated Report View */}
+      {viewMode === "calculated" && !compoundReport && (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-sm text-muted-foreground">
+              No events to calculate report from. Try the Raw API Data view.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-      <TabsContent value="collateral">
-        <CollateralTab
-          collateralLedger={compoundReport.collateralLedger}
-          borrowerRecon={compoundReport.borrowerRecon}
-        />
-      </TabsContent>
+      {viewMode === "calculated" && compoundReport && (
+        <Tabs defaultValue="summary" className="space-y-4">
+          <TabsList className="flex h-auto flex-wrap gap-2">
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="loan">Loan</TabsTrigger>
+            <TabsTrigger value="collateral">Collateral</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="je">JE</TabsTrigger>
+          </TabsList>
 
-      <TabsContent value="transactions">
-        <TransactionsTab
-          events={transformToCompoundEvents(normalizedEvents)}
-        />
-      </TabsContent>
+          <TabsContent value="summary">
+            <SummaryTab
+              collateralSummary={compoundReport.collateralSummary}
+              debtSummary={compoundReport.debtSummary}
+              collateralTokens={compoundReport.collateralTokens}
+              debtTokens={compoundReport.debtTokens}
+            />
+          </TabsContent>
 
-      <TabsContent value="je">
-        <JournalEntriesTab
-          borrowerRecon={compoundReport.borrowerRecon}
-        />
-      </TabsContent>
-    </Tabs>
+          <TabsContent value="loan">
+            <LoanTab
+              loanLedger={compoundReport.loanLedger}
+              positions={compoundReport.borrowerRecon.positions}
+            />
+          </TabsContent>
+
+          <TabsContent value="collateral">
+            <CollateralTab
+              collateralLedger={compoundReport.collateralLedger}
+              borrowerRecon={compoundReport.borrowerRecon}
+            />
+          </TabsContent>
+
+          <TabsContent value="transactions">
+            <TransactionsTab
+              events={transformToCompoundEvents(normalizedEvents)}
+            />
+          </TabsContent>
+
+        <TabsContent value="je">
+          <JournalEntriesTab
+            borrowerRecon={compoundReport.borrowerRecon}
+          />
+        </TabsContent>
+      </Tabs>
+      )}
+    </div>
   );
 }
