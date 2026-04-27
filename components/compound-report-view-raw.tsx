@@ -196,7 +196,7 @@ export function CompoundReportViewRaw({ report }: Props) {
         </Card>
       </TabsContent>
 
-      {/* Reconciliation Tab */}
+      {/* Reconciliation Tab - Dynamic fields based on actual data */}
       <TabsContent value="reconciliation">
         <Card className="bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -215,52 +215,34 @@ export function CompoundReportViewRaw({ report }: Props) {
             {reconciliationRows.length === 0 ? (
               <p className="text-muted-foreground">No reconciliation data found.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>MONTH</TableHead>
-                    <TableHead>TOKEN</TableHead>
-                    <TableHead>POSITION</TableHead>
-                    <TableHead>ITEM</TableHead>
-                    <TableHead className="text-right">START</TableHead>
-                    <TableHead className="text-right">PROVIDED</TableHead>
-                    <TableHead className="text-right">ACCRUALS</TableHead>
-                    <TableHead className="text-right">LIQUIDATED</TableHead>
-                    <TableHead className="text-right">RECLAIMED</TableHead>
-                    <TableHead className="text-right">END</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reconciliationRows.map((row, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{String(row.month ?? row.periodLabel ?? "-")}</TableCell>
-                      <TableCell className="font-semibold">{String(row.tokenSymbol ?? row.token ?? "-")}</TableCell>
-                      <TableCell className={accountColors[String(row.positionType ?? "").toLowerCase()] || ""}>
-                        {String(row.positionType ?? "-")}
-                      </TableCell>
-                      <TableCell>{String(row.item ?? row.activityType ?? "-")}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatValue(row.startBalance ?? row.start ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-green-400">
-                        {formatValue(row.provided ?? row.deposits ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatValue(row.accruals ?? row.interest ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-red-400">
-                        {formatValue(row.liquidated ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-purple-400">
-                        {formatValue(row.reclaimed ?? row.withdrawals ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatValue(row.endBalance ?? row.end ?? 0)}
-                      </TableCell>
+              <>
+                {/* Show all field names from the first row for debugging */}
+                <div className="mb-4 p-3 bg-muted/30 rounded text-xs">
+                  <strong>Available fields:</strong> {Object.keys(reconciliationRows[0]).join(", ")}
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {Object.keys(reconciliationRows[0]).map((key) => (
+                        <TableHead key={key} className="text-xs uppercase">
+                          {key}
+                        </TableHead>
+                      ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {reconciliationRows.map((row, idx) => (
+                      <TableRow key={idx}>
+                        {Object.entries(row).map(([key, value], cellIdx) => (
+                          <TableCell key={cellIdx} className="font-mono text-xs">
+                            {formatValue(value)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
             )}
           </CardContent>
         </Card>
