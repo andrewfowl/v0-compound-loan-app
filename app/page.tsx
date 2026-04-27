@@ -9,9 +9,11 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Wallet = {
-  id: string;
-  walletAddress: string;
-  reports?: { period: string }[];
+  walletId: string;
+  address: string;
+  walletStartDate?: string;
+  availablePeriods?: string[];
+  latestReportAt?: string;
 };
 
 export default function HomePage() {
@@ -29,20 +31,17 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchWallets() {
       try {
-        const res = await fetch("/api/indexing/wallets", { cache: "no-store" });
+        const res = await fetch("/api/indexing/wallet-catalog", { cache: "no-store" });
         const data = await res.json();
-        console.log("[v0] Wallets API response:", { status: res.status, data });
         if (res.ok && Array.isArray(data)) {
           setWallets(data);
         } else if (res.ok && data.wallets) {
           setWallets(data.wallets);
         } else if (res.ok && data.data && Array.isArray(data.data)) {
           setWallets(data.data);
-        } else {
-          console.log("[v0] Unexpected wallets response format");
         }
-      } catch (err) {
-        console.log("[v0] Failed to fetch wallets:", err);
+      } catch {
+        // silently fail - wallet catalog is optional
       } finally {
         setLoadingWallets(false);
       }
@@ -51,7 +50,7 @@ export default function HomePage() {
   }, []);
 
   const handleViewReport = (wallet: Wallet, period: string) => {
-    router.push(`/activity/${wallet.walletAddress}?walletId=${wallet.id}&period=${period}`);
+    router.push(`/activity/${wallet.address}?period=${period}`);
   };
 
   const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -83,6 +82,24 @@ export default function HomePage() {
     setLoading(true);
 
     try {
+      // Check if wallet already has this period indexed
+      const catalogRes = await fetch(
+        `/api/indexing/wallet-catalog?address=${encodeURIComponent(address.toLowerCase())}`,
+        { cache: "no-store" }
+      );
+
+      if (catalogRes.ok) {
+        const catalogData = await catalogRes.json();
+        const availablePeriods: string[] = catalogData.availablePeriods || [];
+
+        // If period already exists, go directly to report view
+        if (availablePeriods.includes(reportEndMonth)) {
+          router.push(`/activity/${address.toLowerCase()}?period=${reportEndMonth}`);
+          return;
+        }
+      }
+
+      // Period not found or wallet not indexed, create new indexing job
       const response = await fetch("/api/indexing/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -198,24 +215,24 @@ export default function HomePage() {
             <div className="space-y-4">
               {wallets.map((wallet) => (
                 <div
-                  key={wallet.id}
+                  key={wallet.walletId}
                   className="flex flex-col gap-2 rounded-lg border p-4"
                 >
                   <div className="flex items-center justify-between">
                     <code className="text-sm font-mono">
-                      {wallet.walletAddress}
+                      {wallet.address}
                     </code>
                   </div>
-                  {wallet.reports && wallet.reports.length > 0 ? (
+                  {wallet.availablePeriods && wallet.availablePeriods.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {wallet.reports.map((report) => (
+                      {wallet.availablePeriods.map((period) => (
                         <Button
-                          key={report.period}
+                          key={period}
                           variant="secondary"
                           size="sm"
-                          onClick={() => handleViewReport(wallet, report.period)}
+                          onClick={() => handleViewReport(wallet, period)}
                         >
-                          {report.period}
+                          {period}
                         </Button>
                       ))}
                     </div>
