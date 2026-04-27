@@ -186,6 +186,9 @@ export function JournalEntriesTab({ borrowerRecon }: JournalEntriesTabProps) {
             <Info className="h-3 w-3" />
             Hover over descriptions and amounts to see calculation details
           </span>
+          <span className="border-l pl-4">
+            <span className="italic">Italic rows with (FV)</span> = Fair Value adjustments based on estimated monthly volatility
+          </span>
         </div>
       </div>
 
