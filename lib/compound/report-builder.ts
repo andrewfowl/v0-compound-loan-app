@@ -57,6 +57,48 @@ function computeRiskLevel(debtUsd: number, collateralUsd: number): RiskLevel {
  *   FV Adj = endBalance (tokens) × (userPrice − impliedOnChainPrice)
  * impliedOnChainPrice per event = amountUsd ÷ amount.
  */
+/**
+ * Insert estimated interest accrual rows between consecutive ledger entries for a given asset.
+ * A calculated row is inserted whenever:
+ *   - There is a gap of >= 1 day between consecutive entries
+ *   - No explicit interest event already covers that gap
+ *   - The running balance is > 0 (i.e. there is an open position to accrue on)
+ *
+ * @param entries  Ledger rows for one asset, sorted ascending by date
+ * @param apr      Annual percentage rate as a decimal (e.g. 0.05 for 5%)
+ * @param isDebt   True for loan ledger (accrual increases balance); false for collateral (supply income)
+ */
+function injectCalculatedInterest<T extends { date: string; start: number; end: number; token: string; riskAtTime: RiskLevel }>(
+  entries: T[],
+  apr: number,
+  makeAccrualRow: (prev: T, accrual: number, days: number, newStart: number) => T
+): T[] {
+  if (entries.length === 0) return entries
+  const result: T[] = []
+  for (let i = 0; i < entries.length; i++) {
+    const prev = result[result.length - 1] ?? entries[i]
+    const curr = entries[i]
+    if (i > 0) {
+      const prevDate = new Date(prev.date)
+      const currDate = new Date(curr.date)
+      const days = Math.round((currDate.getTime() - prevDate.getTime()) / 86_400_000)
+      const runningBalance = prev.end
+      // Only insert if gap >= 1 day, balance is open, and this isn't already an accrual row
+      if (days >= 1 && runningBalance > 0 && !(prev as unknown as { calculated?: boolean }).calculated) {
+        const accrual = runningBalance * (apr / 365) * days
+        if (accrual > 0.000001) {
+          // Midpoint date for the calculated row
+          const midDate = new Date(prevDate.getTime() + (currDate.getTime() - prevDate.getTime()) / 2)
+          const midDateStr = midDate.toISOString().slice(0, 10)
+          result.push(makeAccrualRow({ ...prev, date: midDateStr } as T, accrual, days, runningBalance))
+        }
+      }
+    }
+    result.push(curr)
+  }
+  return result
+}
+
 export function buildCompoundReport(
   events: CompoundEvent[],
   priceOverrides: PriceOverrides = {}
@@ -180,6 +222,59 @@ export function buildCompoundReport(
     }
   }
 
+  // Inject calculated interest accrual rows between on-chain events per asset
+  // Compound v3 borrow APR ~5%, supply APR ~4% — users can override these in the JE tab price panel
+  const BORROW_APR = 0.05
+  const SUPPLY_APR = 0.04
+
+  // Group loan ledger by asset, inject, then flatten back in date order
+  const loanAssets = [...new Set(loanLedger.map((r) => r.token))]
+  const loanLedgerWithAccruals = loanAssets.flatMap((asset) => {
+    const assetRows = loanLedger.filter((r) => r.token === asset)
+    return injectCalculatedInterest(
+      assetRows,
+      BORROW_APR,
+      (prev, accrual, days, newStart) => ({
+        ...prev,
+        item: "Est. Interest (calc.)",
+        accruals: accrual,
+        proceeds: 0,
+        liquidated: 0,
+        payments: 0,
+        start: newStart,
+        end: newStart + accrual,
+        txHash: "",
+        calculated: true,
+        calculatedApr: BORROW_APR,
+        calculatedDays: days,
+      })
+    )
+  }).sort((a, b) => a.date.localeCompare(b.date))
+
+  // Group collateral ledger by asset, inject, then flatten back in date order
+  const collAssets = [...new Set(collateralLedger.map((r) => r.token))]
+  const collateralLedgerWithAccruals = collAssets.flatMap((asset) => {
+    const assetRows = collateralLedger.filter((r) => r.token === asset)
+    return injectCalculatedInterest(
+      assetRows,
+      SUPPLY_APR,
+      (prev, accrual, days, newStart) => ({
+        ...prev,
+        item: "Est. Interest (calc.)",
+        accruals: accrual,
+        provided: 0,
+        liquidated: 0,
+        reclaimed: 0,
+        start: newStart,
+        end: newStart + accrual,
+        txHash: "",
+        calculated: true,
+        calculatedApr: SUPPLY_APR,
+        calculatedDays: days,
+      })
+    )
+  }).sort((a, b) => a.date.localeCompare(b.date))
+
   // Build borrower reconciliation with journal entries
   const borrowerRecon = buildBorrowerRecon(events, loanBalances, collateralBalances, runningDebtUsd, runningCollateralUsd, priceOverrides)
 
@@ -188,8 +283,8 @@ export function buildCompoundReport(
     debtSummary,
     collateralTokens: Array.from(collTokens).sort(),
     debtTokens: Array.from(dbtTokens).sort(),
-    loanLedger,
-    collateralLedger,
+    loanLedger: loanLedgerWithAccruals,
+    collateralLedger: collateralLedgerWithAccruals,
     borrowerRecon,
   }
 }

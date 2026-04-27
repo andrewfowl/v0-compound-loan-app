@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { groupLoanLedgerByPeriod } from "@/lib/compound/report-builder"
 import { formatLedgerValue } from "@/lib/compound/format"
 import type { LoanLedgerEntry, Period, PositionRisk } from "@/lib/compound/types"
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
+import { ChevronDown, ChevronRight, ExternalLink, HelpCircle } from "lucide-react"
 import { PositionRiskCards } from "./position-risk-cards"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface LoanTabProps {
   loanLedger: LoanLedgerEntry[]
@@ -116,7 +117,8 @@ export function LoanTab({ loanLedger, positions, dataSource = "calculated" }: Lo
                           <TableCell colSpan={3} className="font-semibold text-sm py-2">
                             {group.periodLabel}
                             <span className="ml-2 text-xs font-normal text-muted-foreground">
-                              ({group.rows.length} txn{group.rows.length !== 1 ? "s" : ""})
+                              ({group.rows.filter(r => !r.calculated).length} txn{group.rows.filter(r => !r.calculated).length !== 1 ? "s" : ""}
+                              {group.rows.some(r => r.calculated) && <span className="text-blue-500/70"> + {group.rows.filter(r => r.calculated).length} est.</span>})
                             </span>
                           </TableCell>
                           <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.startBalance, group.subtotals.startBalance < 0)}</TableCell>
@@ -130,10 +132,39 @@ export function LoanTab({ loanLedger, positions, dataSource = "calculated" }: Lo
 
                         {/* Drill-down rows */}
                         {isOpen && group.rows.map((entry, idx) => (
-                          <TableRow key={`${group.periodLabel}-${idx}`} className="bg-background hover:bg-muted/20">
+                          <TableRow
+                            key={`${group.periodLabel}-${idx}`}
+                            className={entry.calculated
+                              ? "bg-blue-500/5 hover:bg-blue-500/10 italic"
+                              : "bg-background hover:bg-muted/20"
+                            }
+                          >
                             <TableCell />
                             <TableCell className="font-medium pl-6">{entry.token}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">{entry.item}</TableCell>
+                            <TableCell className="text-sm">
+                              {entry.calculated ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-1 text-blue-500/80 cursor-help">
+                                        {entry.item}
+                                        <HelpCircle className="size-3" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-xs">
+                                      <div className="space-y-1.5">
+                                        <p className="font-semibold text-sm">Calculated Interest Accrual</p>
+                                        <p className="text-xs font-mono">Balance × (APR ÷ 365) × Days</p>
+                                        <p className="text-xs">{entry.calculatedDays} day{entry.calculatedDays !== 1 ? "s" : ""} at {((entry.calculatedApr ?? 0) * 100).toFixed(1)}% APR (Compound v3 borrow rate estimate)</p>
+                                        <p className="text-xs text-muted-foreground">Not an on-chain event. Estimated between consecutive transactions.</p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <span className="text-muted-foreground">{entry.item}</span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-muted-foreground text-sm">{entry.date}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.start, entry.start < 0, entry.token)}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{formatLedgerValue(entry.proceeds, true, entry.token)}</TableCell>
