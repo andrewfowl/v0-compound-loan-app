@@ -167,18 +167,6 @@ export default function HomePage() {
               <Button type="submit" disabled={loading}>
                 {loading ? "Starting..." : "Start Indexing"}
               </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setAddress("0xd043c56861f3e80b2c5580d7044a6771f802565d");
-                  setWalletStartDate("2021-04-01");
-                  setReportEndMonth("2021-05");
-                }}
-              >
-                Fill sample wallet
-              </Button>
             </div>
           </form>
         </CardContent>
