@@ -9,9 +9,8 @@ import { SummaryTab } from "@/components/compound/summary-tab";
 import { LoanTab } from "@/components/compound/loan-tab";
 import { CollateralTab } from "@/components/compound/collateral-tab";
 import { TransactionsTab } from "@/components/compound/transactions-tab";
-import { JournalEntriesTab } from "@/components/compound/journal-entries-tab";
 import { CompoundReportViewRaw } from "@/components/compound-report-view-raw";
-import { PriceOverridesPanel } from "@/components/compound/price-overrides-panel";
+import { CustomizableJournalTab } from "@/components/compound/customizable-journal-tab";
 import { buildCompoundReport } from "@/lib/compound/report-builder";
 import type {
   CompoundEvent,
@@ -20,7 +19,7 @@ import type {
   LoanLedgerEntry,
   RiskLevel,
 } from "@/lib/compound/types";
-import type { PriceOverrides } from "@/lib/compound/report-builder";
+
 
 type GenericRow = Record<string, unknown>;
 
@@ -187,7 +186,6 @@ function transformToLoanLedger(rows: GenericRow[]): LoanLedgerEntry[] {
 
 export function CompoundReportView({ report, loading = false }: Props) {
   const [viewMode, setViewMode] = useState<"calculated" | "raw" | "mapping">("calculated");
-  const [priceOverrides, setPriceOverrides] = useState<PriceOverrides>({});
   const period = report?.period ?? null;
 
   const normalizedEvents = useMemo(
@@ -204,8 +202,8 @@ export function CompoundReportView({ report, loading = false }: Props) {
   const compoundReport: CompoundReport | null = useMemo(() => {
     if (normalizedEvents.length === 0) return null;
     const events = transformToCompoundEvents(normalizedEvents);
-    return buildCompoundReport(events, priceOverrides);
-  }, [normalizedEvents, priceOverrides]);
+    return buildCompoundReport(events);
+  }, [normalizedEvents]);
 
   // Also extract ledger data directly from reconciliationRows (backend pre-calculated)
   const backendCollateralLedger = useMemo(
@@ -441,19 +439,23 @@ export function CompoundReportView({ report, loading = false }: Props) {
           </TabsContent>
 
           <TabsContent value="je">
-            <div className="space-y-4">
-              <PriceOverridesPanel
-                assets={[
-                  ...new Set([
-                    ...(compoundReport?.collateralTokens ?? []),
-                    ...(compoundReport?.debtTokens ?? []),
-                  ]),
-                ]}
-                overrides={priceOverrides}
-                onChange={setPriceOverrides}
-              />
-              <JournalEntriesTab borrowerRecon={borrowerRecon} />
-            </div>
+            <CustomizableJournalTab
+              borrowerRecon={borrowerRecon}
+              assets={[
+                ...new Set([
+                  ...(compoundReport?.collateralTokens ?? []),
+                  ...(compoundReport?.debtTokens ?? []),
+                ]),
+              ]}
+              startDate={normalizedEvents.length > 0 
+                ? String(normalizedEvents[0].blockTimestamp ?? normalizedEvents[0].block_timestamp ?? "").split("T")[0]
+                : undefined
+              }
+              endDate={normalizedEvents.length > 0 
+                ? String(normalizedEvents[normalizedEvents.length - 1].blockTimestamp ?? normalizedEvents[normalizedEvents.length - 1].block_timestamp ?? "").split("T")[0]
+                : undefined
+              }
+            />
           </TabsContent>
         </Tabs>
       )}
