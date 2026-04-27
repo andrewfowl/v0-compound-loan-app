@@ -74,34 +74,19 @@ export async function getIndexingJob(jobId: string) {
   });
 }
 
-/**
- * Get all indexed wallets for the current user with available periods
- */
-export async function getWalletCatalog() {
-  return backendFetch("/api/wallet-catalog", {
+export async function getIndexingReport(walletId: string, period: string) {
+  const qs = new URLSearchParams({
+    walletId,
+    period,
+  });
+
+  return backendFetch(`/api/reports?${qs.toString()}`, {
     method: "GET",
   });
 }
 
-/**
- * Get wallet info by address, including available periods
- */
-export async function getWalletByAddress(address: string) {
-  const qs = new URLSearchParams({ address });
-  return backendFetch(`/api/wallet-catalog?${qs.toString()}`, {
-    method: "GET",
-  });
-}
-
-/**
- * Get saved report for a specific wallet address and period
- */
-export async function getWalletReport(address: string, period?: string) {
-  const qs = new URLSearchParams({ address });
-  if (period) {
-    qs.set("period", period);
-  }
-  return backendFetch(`/api/wallet-reports?${qs.toString()}`, {
+export async function listWallets() {
+  return backendFetch("/api/wallets", {
     method: "GET",
   });
 }
