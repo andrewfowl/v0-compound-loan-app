@@ -938,30 +938,6 @@ export function CompoundReportView({ report, loading = false }: Props) {
     </Tabs>
   );
 }
-What to do
-Replace components/compound-report-view.tsx with the file above.
-Keep your current app/activity/[address]/page.tsx from the prior step.
-Run the frontend and compare:
-Finance Report Pack
-Legacy Views
-Transactions
-What you should expect
-
-You will now see two reporting styles side by side:
-
-Finance Report Pack
-
-This is the more accounting-oriented view, built mainly from:
-
-period.reconciliationSummary
-period.reconciliationRows
-period.monthStart
-period.monthEnd
-Legacy Views
-
-This preserves your older reporting style, rebuilt from:
-
-period.normalizedEvents
 period.reconciliationRows
 
 So you can compare both before deciding what to keep.
