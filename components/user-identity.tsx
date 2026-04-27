@@ -3,100 +3,111 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, LogOut } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { User, LogOut, ChevronDown } from "lucide-react";
 
-type Props = {
-  onConfirm: (userId: string) => void;
+type UserBadgeProps = {
+  userId: string;
+  onSwitch: (newId: string) => void;
 };
 
-export function UserIdentityGate({ onConfirm }: Props) {
-  const [value, setValue] = useState("");
+export function UserBadge({ userId, onSwitch }: UserBadgeProps) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSwitch = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setError("Please enter a username");
+    const trimmed = input.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setError("Enter at least 2 characters");
       return;
     }
-    if (trimmed.length < 2) {
-      setError("Username must be at least 2 characters");
-      return;
-    }
-    onConfirm(trimmed);
+    onSwitch(trimmed);
+    setInput("");
+    setError("");
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    onSwitch("");
+    setInput("");
+    setOpen(false);
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-          <User className="h-7 w-7 text-primary" />
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome to Compound Reporting</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          DeFi portfolio analytics and reconciliation
-        </p>
-      </div>
-
-      <Card className="w-full max-w-sm shadow-lg">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Sign In</CardTitle>
-          <CardDescription>
-            Enter your username to access your reports. Use the same username to retrieve previously generated reports.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm shadow-sm transition-colors hover:bg-muted">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+            <User className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <span className="max-w-[120px] truncate font-medium">
+            {userId || "Set user"}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-4">
+        {userId ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Current user
+              </p>
+              <p className="mt-1 font-mono text-sm font-semibold">{userId}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Reports are fetched using this ID as the{" "}
+                <code className="rounded bg-muted px-1">x-user-id</code> header.
+              </p>
+            </div>
+            <div className="border-t pt-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Switch user</p>
+              <form onSubmit={handleSwitch} className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={(e) => { setInput(e.target.value); setError(""); }}
+                  placeholder="new username"
+                  className="h-8 font-mono text-xs"
+                />
+                <Button type="submit" size="sm" className="h-8 shrink-0">
+                  Switch
+                </Button>
+              </form>
+              {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+            </div>
+            <button
+              onClick={handleClear}
+              className="flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <p className="font-medium">Set your username</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Enter your username to access previously indexed reports. Reports are linked to your user ID.
+              </p>
+            </div>
+            <form onSubmit={handleSwitch} className="space-y-2">
               <Input
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value);
-                  setError("");
-                }}
+                value={input}
+                onChange={(e) => { setInput(e.target.value); setError(""); }}
                 placeholder="e.g. user_123"
-                className="font-mono"
+                className="font-mono text-sm"
                 autoFocus
               />
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full">
-              Continue
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <p className="mt-8 max-w-sm text-center text-xs text-muted-foreground">
-        Your username is used to associate reports with your account. No password required.
-      </p>
-    </div>
-  );
-}
-
-type HeaderProps = {
-  userId: string;
-  onSwitch: () => void;
-};
-
-export function UserBadge({ userId, onSwitch }: HeaderProps) {
-  return (
-    <div className="flex items-center gap-3 rounded-full border bg-card px-4 py-2 shadow-sm">
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">
-        <User className="h-4 w-4 text-primary" />
-      </div>
-      <span className="text-sm font-medium">{userId}</span>
-      <button
-        onClick={onSwitch}
-        className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        title="Switch user"
-      >
-        <LogOut className="h-4 w-4" />
-      </button>
-    </div>
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              <Button type="submit" className="w-full">
+                Continue
+              </Button>
+            </form>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

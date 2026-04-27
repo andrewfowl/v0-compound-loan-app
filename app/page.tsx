@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserIdentityGate, UserBadge } from "@/components/user-identity";
+import { UserBadge } from "@/components/user-identity";
 import { FileText, Plus, Wallet, Calendar, ArrowRight } from "lucide-react";
 
 // Sample addresses to auto-fetch reports for
@@ -63,7 +63,7 @@ function saveUserPrefs(prefs: Partial<UserPrefs>) {
 export default function HomePage() {
   const router = useRouter();
 
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string>("user_123");
   const [address, setAddress] = useState("");
   const [walletStartDate, setWalletStartDate] = useState("2021-04-01");
   const [reportEndMonth, setReportEndMonth] = useState("2021-05");
@@ -84,8 +84,6 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
-
     setLoadingSamples(true);
 
     async function fetchSampleWallets() {
@@ -118,15 +116,12 @@ export default function HomePage() {
     }
 
     fetchSampleWallets();
-  }, [userId]);
+  }, [userId]); // re-fetch when user switches
 
-  const handleIdentityConfirm = (confirmedId: string) => {
-    setUserId(confirmedId);
-    saveUserPrefs({ userId: confirmedId });
-  };
-
-  const handleSwitchUser = () => {
-    setUserId("");
+  const handleSwitchUser = (newId: string) => {
+    const id = newId || "user_123";
+    setUserId(id);
+    saveUserPrefs({ userId: id });
     setSampleWallets([]);
   };
 
@@ -217,12 +212,6 @@ export default function HomePage() {
 
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  if (userId === null) return null;
-
-  if (userId === "") {
-    return <UserIdentityGate onConfirm={handleIdentityConfirm} />;
-  }
-
   const walletsWithData = sampleWallets.filter((w) => w.hasData);
   const walletsWithoutData = sampleWallets.filter((w) => !w.hasData);
 
@@ -240,6 +229,7 @@ export default function HomePage() {
             </div>
           </div>
           <UserBadge userId={userId} onSwitch={handleSwitchUser} />
+
         </div>
       </header>
 
