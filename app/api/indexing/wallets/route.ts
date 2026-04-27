@@ -1,16 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getWalletCatalog, getWalletByAddress } from "@/lib/indexing-api";
+import { NextResponse } from "next/server";
+import { listWallets } from "@/lib/indexing-api";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const url = new URL(req.url);
-    const address = url.searchParams.get("address")?.trim();
-
-    // If address provided, get specific wallet info
-    // Otherwise, get all wallets for user
-    const data = address
-      ? await getWalletByAddress(address)
-      : await getWalletCatalog();
+    const data = await listWallets();
 
     return NextResponse.json(data, {
       status: 200,
