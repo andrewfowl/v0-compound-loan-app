@@ -87,16 +87,19 @@ export default function ActivityPage() {
   };
 
   const fetchReport = async () => {
-    if (!walletId || !period) return;
+    if (!period) return;
 
     setLoadingReport(true);
     setError("");
 
     try {
-      const res = await fetch(
-        `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`,
-        { cache: "no-store" }
-      );
+      // Try walletId-based fetch first (from job creation flow)
+      // Fall back to address-based fetch (from catalog navigation)
+      const endpoint = walletId
+        ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`
+        : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}`;
+
+      const res = await fetch(endpoint, { cache: "no-store" });
       const data = await res.json();
 
       if (!res.ok) {
@@ -111,8 +114,8 @@ export default function ActivityPage() {
     }
   };
 
-  // If no jobId but we have walletId and period, load report directly
-  const directView = !jobId && walletId && period;
+  // If no jobId but we have period, load report directly (using walletId or address)
+  const directView = !jobId && period;
 
   useEffect(() => {
     if (directView) {

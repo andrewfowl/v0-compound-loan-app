@@ -9,9 +9,14 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Wallet = {
-  id: string;
-  walletAddress: string;
+  // Original format
+  id?: string;
+  walletAddress?: string;
   reports?: { period: string }[];
+  // New wallet-catalog format
+  walletId?: string;
+  address?: string;
+  availablePeriods?: string[];
 };
 
 export default function HomePage() {
@@ -51,7 +56,13 @@ export default function HomePage() {
   }, []);
 
   const handleViewReport = (wallet: Wallet, period: string) => {
-    router.push(`/activity/${wallet.walletAddress}?walletId=${wallet.id}&period=${period}`);
+    const addr = wallet.address || wallet.walletAddress;
+    const wid = wallet.walletId || wallet.id;
+    // Include walletId if available for backward compatibility
+    const url = wid
+      ? `/activity/${addr}?walletId=${wid}&period=${period}`
+      : `/activity/${addr}?period=${period}`;
+    router.push(url);
   };
 
   const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -196,36 +207,42 @@ export default function HomePage() {
             </p>
           ) : (
             <div className="space-y-4">
-              {wallets.map((wallet) => (
-                <div
-                  key={wallet.id}
-                  className="flex flex-col gap-2 rounded-lg border p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <code className="text-sm font-mono">
-                      {wallet.walletAddress}
-                    </code>
-                  </div>
-                  {wallet.reports && wallet.reports.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {wallet.reports.map((report) => (
-                        <Button
-                          key={report.period}
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleViewReport(wallet, report.period)}
-                        >
-                          {report.period}
-                        </Button>
-                      ))}
+              {wallets.map((wallet) => {
+                const key = wallet.walletId || wallet.id || wallet.address || wallet.walletAddress;
+                const displayAddress = wallet.address || wallet.walletAddress;
+                const periods = wallet.availablePeriods || wallet.reports?.map(r => r.period) || [];
+                
+                return (
+                  <div
+                    key={key}
+                    className="flex flex-col gap-2 rounded-lg border p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <code className="text-sm font-mono">
+                        {displayAddress}
+                      </code>
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      No reports available yet
-                    </p>
-                  )}
-                </div>
-              ))}
+                    {periods.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {periods.map((period) => (
+                          <Button
+                            key={period}
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleViewReport(wallet, period)}
+                          >
+                            {period}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        No reports available yet
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
