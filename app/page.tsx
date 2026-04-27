@@ -14,16 +14,21 @@ const SAMPLE_ADDRESSES = [
   "0xd043c56861F3e80b2C5580d7044a6771F802565D",
   "0x462cbA2dC7e2709143BcaCC86ec106354cf82108",
   "0xCB1096E77d6eAb734ffCEced1Fcd2D35EE6b8d15",
+  "0x8888882f8f843896699869179fB6E4f7e3B58888",
+  "0xd1a85beAED6b5D2e61D3C50C4bD56e4E46133686",
+  "0x77cC571AFa264930608A109346af44bA17Fbc174",
+  "0xf03852F5123E6c10F53c6ec976AC79a66982d020",
+  "0x7FB4620DFfF2178A50DD611a7E7CD8f661806b50",
+  "0xA9Bed40A14204557Ff41F5Ca394AA1Fd588F460A",
 ];
 
 const USER_PREFS_KEY = "compound-reporting-user-prefs";
 
-type Wallet = {
-  walletId: string;
+type WalletStatus = {
   address: string;
-  walletStartDate?: string;
-  availablePeriods?: string[];
-  latestReportAt?: string;
+  walletId?: string;
+  availablePeriods: string[];
+  hasData: boolean; // true if API returned any known periods
 };
 
 type UserPrefs = {
@@ -60,7 +65,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [sampleWallets, setSampleWallets] = useState<Wallet[]>([]);
+  const [sampleWallets, setSampleWallets] = useState<WalletStatus[]>([]);
   const [loadingSamples, setLoadingSamples] = useState(true);
 
   const [activeTab, setActiveTab] = useState<string>("reports");
@@ -73,13 +78,11 @@ export default function HomePage() {
     if (prefs.lastReportEndMonth) setReportEndMonth(prefs.lastReportEndMonth);
   }, []);
 
-  // Fetch reports for sample addresses
+  // Fetch reports for all sample addresses in parallel
   useEffect(() => {
     async function fetchSampleWallets() {
-      const results: Wallet[] = [];
-
-      await Promise.all(
-        SAMPLE_ADDRESSES.map(async (addr) => {
+      const results = await Promise.all(
+        SAMPLE_ADDRESSES.map(async (addr): Promise<WalletStatus> => {
           try {
             const res = await fetch(
               `/api/indexing/wallet-catalog?address=${encodeURIComponent(addr.toLowerCase())}`,
@@ -87,19 +90,18 @@ export default function HomePage() {
             );
             if (res.ok) {
               const data = await res.json();
-              if (data && (data.walletId || data.address || data.availablePeriods)) {
-                results.push({
-                  walletId: data.walletId || addr,
-                  address: data.address || addr,
-                  walletStartDate: data.walletStartDate,
-                  availablePeriods: data.availablePeriods || [],
-                  latestReportAt: data.latestReportAt,
-                });
-              }
+              const periods: string[] = data?.availablePeriods || [];
+              return {
+                address: addr,
+                walletId: data?.walletId,
+                availablePeriods: periods,
+                hasData: periods.length > 0,
+              };
             }
           } catch {
-            // silently skip this address
+            // silently fail for this address
           }
+          return { address: addr, availablePeriods: [], hasData: false };
         })
       );
 
@@ -110,11 +112,11 @@ export default function HomePage() {
     fetchSampleWallets();
   }, []);
 
-  const handleViewReport = (wallet: Wallet, period: string) => {
+  const handleViewReport = (wallet: WalletStatus, period: string) => {
     router.push(`/activity/${wallet.address}?period=${period}`);
   };
 
-  const handleSelectSampleAddress = (addr: string) => {
+  const handleIndexAddress = (addr: string) => {
     setAddress(addr);
     setActiveTab("index");
   };
@@ -227,60 +229,51 @@ export default function HomePage() {
           <TabsTrigger value="index">New Index Request</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="reports" className="space-y-6">
+        <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Available Reports</CardTitle>
+              <CardTitle>Sample Wallets</CardTitle>
               <CardDescription>
-                Select a wallet and period to view the report
+                Click a period to view a report, or index a new period for any wallet.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loadingSamples ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              ) : sampleWallets.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    No reports available yet for the sample wallets.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => setActiveTab("index")}
-                  >
-                    Start Indexing
-                  </Button>
+                <div className="space-y-3">
+                  {SAMPLE_ADDRESSES.map((addr) => (
+                    <Skeleton key={addr} className="h-16 w-full" />
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {sampleWallets.map((wallet) => (
                     <div
-                      key={wallet.walletId}
-                      className="rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50"
+                      key={wallet.address}
+                      className="flex flex-col gap-3 rounded-lg border p-4"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
                           <code className="text-sm font-mono font-medium">
                             {formatAddress(wallet.address)}
                           </code>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {wallet.availablePeriods?.length || 0} report(s) available
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {wallet.hasData
+                              ? `${wallet.availablePeriods.length} period(s) available`
+                              : "No indexed reports yet"}
                           </p>
                         </div>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => handleSelectSampleAddress(wallet.address)}
+                          onClick={() => handleIndexAddress(wallet.address)}
+                          className="shrink-0"
                         >
-                          Index New Period
+                          Index Period
                         </Button>
                       </div>
-                      {wallet.availablePeriods && wallet.availablePeriods.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
+
+                      {wallet.hasData && (
+                        <div className="flex flex-wrap gap-2">
                           {wallet.availablePeriods.map((period) => (
                             <Button
                               key={period}
@@ -292,43 +285,9 @@ export default function HomePage() {
                             </Button>
                           ))}
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   ))}
-                </div>
-              )}
-
-              {/* Show sample addresses that don't have reports yet */}
-              {!loadingSamples && (
-                <div className="mt-6 border-t pt-6">
-                  <p className="mb-3 text-sm font-medium text-muted-foreground">
-                    Sample Addresses
-                  </p>
-                  <div className="space-y-2">
-                    {SAMPLE_ADDRESSES.map((addr) => {
-                      const hasReports = sampleWallets.some(
-                        (w) => w.address.toLowerCase() === addr.toLowerCase()
-                      );
-                      if (hasReports) return null;
-                      return (
-                        <div
-                          key={addr}
-                          className="flex items-center justify-between rounded-lg border border-dashed p-3"
-                        >
-                          <code className="text-xs font-mono text-muted-foreground">
-                            {formatAddress(addr)}
-                          </code>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSelectSampleAddress(addr)}
-                          >
-                            Index This Wallet
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
             </CardContent>
@@ -361,7 +320,7 @@ export default function HomePage() {
                     <Button
                       key={addr}
                       type="button"
-                      variant="outline"
+                      variant={address.toLowerCase() === addr.toLowerCase() ? "default" : "outline"}
                       size="sm"
                       onClick={() => setAddress(addr)}
                       className="font-mono text-xs"
