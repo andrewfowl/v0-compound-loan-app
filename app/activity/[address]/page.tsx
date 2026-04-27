@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompoundReportView } from "@/components/compound-report-view";
 
+const USER_PREFS_KEY = "compound-reporting-user-prefs";
+
 type JobStatus = {
   jobId: string;
   status: string;
@@ -49,6 +51,17 @@ function extractReportPayload(input: unknown): ReportPayload | null {
   return input as ReportPayload;
 }
 
+function loadUserIdFromStorage(): string {
+  if (typeof window === "undefined") return "user_123";
+  try {
+    const stored = localStorage.getItem(USER_PREFS_KEY);
+    const prefs = stored ? JSON.parse(stored) : {};
+    return prefs.userId || "user_123";
+  } catch {
+    return "user_123";
+  }
+}
+
 export default function ActivityPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -57,13 +70,19 @@ export default function ActivityPage() {
   const jobId = searchParams.get("jobId") || "";
   const walletId = searchParams.get("walletId") || "";
   const period = searchParams.get("period") || "";
-  const userId = searchParams.get("userId") || "";
+
+  const [userId, setUserId] = useState("user_123");
 
   const [job, setJob] = useState<JobStatus | null>(null);
   const [report, setReport] = useState<ReportPayload | null>(null);
   const [loadingJob, setLoadingJob] = useState(true);
   const [loadingReport, setLoadingReport] = useState(false);
   const [error, setError] = useState("");
+
+  // Load userId from localStorage on mount
+  useEffect(() => {
+    setUserId(loadUserIdFromStorage());
+  }, []);
 
   const fetchJob = async () => {
     if (!jobId) return;
@@ -95,10 +114,10 @@ export default function ActivityPage() {
 
     try {
       // Use walletId-based endpoint if available (from job flow), otherwise use address-based endpoint
-      const userParam = userId ? `&userId=${encodeURIComponent(userId)}` : "";
+      // userId will be sent via x-user-id header by the API route (no query param needed)
       const endpoint = walletId
-        ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}${userParam}`
-        : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}${userParam}`;
+        ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`
+        : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}`;
 
       const res = await fetch(endpoint, { cache: "no-store" });
       const data = await res.json();

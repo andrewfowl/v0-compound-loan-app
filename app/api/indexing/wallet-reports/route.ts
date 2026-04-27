@@ -14,11 +14,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Default to user_123 if no userId provided (for sample wallets)
-    const userId = url.searchParams.get("userId")?.trim() || "user_123";
-    console.log("[v0] wallet-reports request:", { address, period, userId });
-    const data = await getWalletReports(address, period || undefined, userId);
-    console.log("[v0] wallet-reports response:", data);
+    // Always use user_123 for sample wallet reports (no query param needed)
+    const data = await getWalletReports(address, period || undefined, "user_123");
 
     return NextResponse.json(data, {
       status: 200,

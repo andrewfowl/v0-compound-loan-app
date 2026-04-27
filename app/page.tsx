@@ -126,9 +126,7 @@ export default function HomePage() {
   };
 
   const handleViewReport = (wallet: WalletStatus, period: string) => {
-    router.push(
-      `/activity/${wallet.address}?period=${encodeURIComponent(period)}&userId=${encodeURIComponent(userId!)}`
-    );
+    router.push(`/activity/${wallet.address}?period=${encodeURIComponent(period)}`);
   };
 
   const handleIndexAddress = (addr: string) => {
@@ -164,7 +162,7 @@ export default function HomePage() {
 
     try {
       const catalogRes = await fetch(
-        `/api/indexing/wallet-catalog?address=${encodeURIComponent(address.toLowerCase())}&userId=${encodeURIComponent(userId!)}`,
+        `/api/indexing/wallet-catalog?address=${encodeURIComponent(address.toLowerCase())}&multi=true`,
         { cache: "no-store" }
       );
 
@@ -200,7 +198,6 @@ export default function HomePage() {
       nextUrl.searchParams.set("jobId", data.jobId);
       nextUrl.searchParams.set("walletId", data.walletId);
       nextUrl.searchParams.set("period", reportEndMonth);
-      nextUrl.searchParams.set("userId", userId!);
 
       router.push(`${nextUrl.pathname}${nextUrl.search}`);
     } catch (err) {
