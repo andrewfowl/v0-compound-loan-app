@@ -623,9 +623,7 @@ function LegacyLedger({
 }
 
 export function CompoundReportView({ report, loading = false }: Props) {
-  console.log("[v0] CompoundReportView received report:", report);
   const period = report?.period ?? null;
-  console.log("[v0] CompoundReportView period:", period);
 
   const normalizedEvents = useMemo(
     () => (Array.isArray(period?.normalizedEvents) ? period.normalizedEvents : []),

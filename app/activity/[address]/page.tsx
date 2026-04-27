@@ -72,6 +72,7 @@ export default function ActivityPage() {
   const period = searchParams.get("period") || "";
 
   const [userId, setUserId] = useState("user_123");
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const [job, setJob] = useState<JobStatus | null>(null);
   const [report, setReport] = useState<ReportPayload | null>(null);
@@ -82,6 +83,7 @@ export default function ActivityPage() {
   // Load userId from localStorage on mount
   useEffect(() => {
     setUserId(loadUserIdFromStorage());
+    setIsHydrated(true);
   }, []);
 
   const fetchJob = async () => {
@@ -107,7 +109,6 @@ export default function ActivityPage() {
   };
 
   const fetchReport = async () => {
-    console.log("[v0] fetchReport called, period:", period, "address:", address, "walletId:", walletId);
     if (!period) return;
 
     setLoadingReport(true);
@@ -123,15 +124,11 @@ export default function ActivityPage() {
       const res = await fetch(endpoint, { cache: "no-store" });
       const data = await res.json();
 
-      console.log("[v0] Activity page received data:", data);
-
       if (!res.ok) {
         throw new Error(data.error || "Failed to fetch report");
       }
 
-      const extracted = extractReportPayload(data);
-      console.log("[v0] Extracted report payload:", extracted);
-      setReport(extracted);
+      setReport(extractReportPayload(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch report");
     } finally {
@@ -143,6 +140,8 @@ export default function ActivityPage() {
   const directView = !jobId && period;
 
   useEffect(() => {
+    if (!isHydrated) return; // Wait for hydration before fetching
+    
     if (directView) {
       setLoadingJob(false);
       fetchReport();
@@ -150,7 +149,7 @@ export default function ActivityPage() {
       fetchJob();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId, walletId, period]);
+  }, [jobId, walletId, period, isHydrated]);
 
   useEffect(() => {
     if (!jobId || directView) return;
