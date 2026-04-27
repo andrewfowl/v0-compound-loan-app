@@ -23,15 +23,17 @@ const SAMPLE_ADDRESSES = [
 ];
 
 const USER_PREFS_KEY = "compound-reporting-user-prefs";
+const DEFAULT_USER_ID = "user_123";
 
 type WalletStatus = {
   address: string;
   walletId?: string;
   availablePeriods: string[];
-  hasData: boolean; // true if API returned any known periods
+  hasData: boolean;
 };
 
 type UserPrefs = {
+  userId?: string;
   lastAddress?: string;
   lastWalletStartDate?: string;
   lastReportEndMonth?: string;
@@ -50,7 +52,8 @@ function loadUserPrefs(): UserPrefs {
 function saveUserPrefs(prefs: UserPrefs) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(USER_PREFS_KEY, JSON.stringify(prefs));
+    const existing = loadUserPrefs();
+    localStorage.setItem(USER_PREFS_KEY, JSON.stringify({ ...existing, ...prefs }));
   } catch {
     // silently fail
   }
@@ -59,6 +62,7 @@ function saveUserPrefs(prefs: UserPrefs) {
 export default function HomePage() {
   const router = useRouter();
 
+  const [userId, setUserId] = useState(DEFAULT_USER_ID);
   const [address, setAddress] = useState("");
   const [walletStartDate, setWalletStartDate] = useState("2021-04-01");
   const [reportEndMonth, setReportEndMonth] = useState("2021-05");
@@ -73,6 +77,7 @@ export default function HomePage() {
   // Load user preferences on mount
   useEffect(() => {
     const prefs = loadUserPrefs();
+    if (prefs.userId) setUserId(prefs.userId);
     if (prefs.lastAddress) setAddress(prefs.lastAddress);
     if (prefs.lastWalletStartDate) setWalletStartDate(prefs.lastWalletStartDate);
     if (prefs.lastReportEndMonth) setReportEndMonth(prefs.lastReportEndMonth);
@@ -85,7 +90,7 @@ export default function HomePage() {
         SAMPLE_ADDRESSES.map(async (addr): Promise<WalletStatus> => {
           try {
             const res = await fetch(
-              `/api/indexing/wallet-catalog?address=${encodeURIComponent(addr.toLowerCase())}`,
+              `/api/indexing/wallet-catalog?address=${encodeURIComponent(addr.toLowerCase())}&multi=true`,
               { cache: "no-store" }
             );
             if (res.ok) {
@@ -113,7 +118,7 @@ export default function HomePage() {
   }, []);
 
   const handleViewReport = (wallet: WalletStatus, period: string) => {
-    router.push(`/activity/${wallet.address}?period=${period}`);
+    router.push(`/activity/${wallet.address}?period=${period}&userId=${encodeURIComponent(userId)}`);
   };
 
   const handleIndexAddress = (addr: string) => {
@@ -149,6 +154,7 @@ export default function HomePage() {
 
     // Save user preferences
     saveUserPrefs({
+      userId,
       lastAddress: address,
       lastWalletStartDate: walletStartDate,
       lastReportEndMonth: reportEndMonth,
@@ -305,6 +311,19 @@ export default function HomePage() {
 
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
+                <Field>
+                  <FieldLabel>User ID</FieldLabel>
+                  <Input
+                    value={userId}
+                    onChange={(e) => {
+                      setUserId(e.target.value);
+                      saveUserPrefs({ userId: e.target.value });
+                    }}
+                    placeholder="user_123"
+                    className="font-mono"
+                  />
+                </Field>
+
                 <Field>
                   <FieldLabel>Ethereum Address</FieldLabel>
                   <Input

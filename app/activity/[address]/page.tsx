@@ -57,6 +57,7 @@ export default function ActivityPage() {
   const jobId = searchParams.get("jobId") || "";
   const walletId = searchParams.get("walletId") || "";
   const period = searchParams.get("period") || "";
+  const userId = searchParams.get("userId") || "";
 
   const [job, setJob] = useState<JobStatus | null>(null);
   const [report, setReport] = useState<ReportPayload | null>(null);
@@ -94,9 +95,10 @@ export default function ActivityPage() {
 
     try {
       // Use walletId-based endpoint if available (from job flow), otherwise use address-based endpoint
+      const userParam = userId ? `&userId=${encodeURIComponent(userId)}` : "";
       const endpoint = walletId
-        ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}`
-        : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}`;
+        ? `/api/indexing/reports?walletId=${encodeURIComponent(walletId)}&period=${encodeURIComponent(period)}${userParam}`
+        : `/api/indexing/wallet-reports?address=${encodeURIComponent(address)}&period=${encodeURIComponent(period)}${userParam}`;
 
       const res = await fetch(endpoint, { cache: "no-store" });
       const data = await res.json();
