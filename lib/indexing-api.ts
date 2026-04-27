@@ -22,7 +22,10 @@ async function backendFetch(path: string, options: BackendFetchOptions = {}) {
   headers.set("Content-Type", "application/json");
   headers.set("x-user-id", BACKEND_PROXY_USER_ID);
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  const fullUrl = `${baseUrl}${path}`;
+  console.log("[v0] Backend fetch:", { method: options.method || "GET", url: fullUrl });
+
+  const response = await fetch(fullUrl, {
     method: options.method || "GET",
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -33,6 +36,8 @@ async function backendFetch(path: string, options: BackendFetchOptions = {}) {
   const payload = contentType.includes("application/json")
     ? await response.json().catch(() => null)
     : await response.text().catch(() => "");
+
+  console.log("[v0] Backend response:", { status: response.status, url: fullUrl, payload });
 
   if (!response.ok) {
     const message =

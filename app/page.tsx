@@ -31,13 +31,18 @@ export default function HomePage() {
       try {
         const res = await fetch("/api/indexing/wallets", { cache: "no-store" });
         const data = await res.json();
+        console.log("[v0] Wallets API response:", { status: res.status, data });
         if (res.ok && Array.isArray(data)) {
           setWallets(data);
         } else if (res.ok && data.wallets) {
           setWallets(data.wallets);
+        } else if (res.ok && data.data && Array.isArray(data.data)) {
+          setWallets(data.data);
+        } else {
+          console.log("[v0] Unexpected wallets response format");
         }
-      } catch {
-        // silently fail - wallets list is optional
+      } catch (err) {
+        console.log("[v0] Failed to fetch wallets:", err);
       } finally {
         setLoadingWallets(false);
       }
