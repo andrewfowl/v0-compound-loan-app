@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIndexingReport } from "@/lib/indexing-api";
+import { getWalletReport } from "@/lib/indexing-api";
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const walletId = String(url.searchParams.get("walletId") || "").trim();
-    const period = String(url.searchParams.get("period") || "").trim();
+    const address = String(url.searchParams.get("address") || "").trim();
+    const period = url.searchParams.get("period")?.trim();
 
-    if (!walletId) {
+    if (!address) {
       return NextResponse.json(
-        { error: "walletId is required" },
+        { error: "address is required" },
         { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
 
-    if (!/^\d{4}-\d{2}$/.test(period)) {
+    // Period is optional - if omitted, returns all reports for the wallet
+    if (period && !/^\d{4}-\d{2}$/.test(period)) {
       return NextResponse.json(
         { error: "period must be YYYY-MM" },
         { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
 
-    const data = await getIndexingReport(walletId, period);
+    const data = await getWalletReport(address, period || undefined);
 
     return NextResponse.json(data, {
       status: 200,

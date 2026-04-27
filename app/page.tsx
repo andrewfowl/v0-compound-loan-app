@@ -9,9 +9,11 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Wallet = {
-  id: string;
-  walletAddress: string;
-  reports?: { period: string }[];
+  walletId: string;
+  address: string;
+  walletStartDate?: string;
+  availablePeriods?: string[];
+  latestReportAt?: string;
 };
 
 export default function HomePage() {
@@ -51,7 +53,7 @@ export default function HomePage() {
   }, []);
 
   const handleViewReport = (wallet: Wallet, period: string) => {
-    router.push(`/activity/${wallet.walletAddress}?walletId=${wallet.id}&period=${period}`);
+    router.push(`/activity/${wallet.address}?period=${period}`);
   };
 
   const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -83,6 +85,24 @@ export default function HomePage() {
     setLoading(true);
 
     try {
+      // Check if wallet already has this period indexed
+      const catalogRes = await fetch(
+        `/api/indexing/wallets?address=${encodeURIComponent(address.toLowerCase())}`,
+        { cache: "no-store" }
+      );
+      
+      if (catalogRes.ok) {
+        const catalogData = await catalogRes.json();
+        const availablePeriods: string[] = catalogData.availablePeriods || [];
+        
+        // If period already exists, go directly to report view
+        if (availablePeriods.includes(reportEndMonth)) {
+          router.push(`/activity/${address.toLowerCase()}?period=${reportEndMonth}`);
+          return;
+        }
+      }
+
+      // Period not found, create indexing job
       const response = await fetch("/api/indexing/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,7 +129,6 @@ export default function HomePage() {
       );
 
       nextUrl.searchParams.set("jobId", data.jobId);
-      nextUrl.searchParams.set("walletId", data.walletId);
       nextUrl.searchParams.set("period", reportEndMonth);
 
       router.push(`${nextUrl.pathname}${nextUrl.search}`);
@@ -198,24 +217,24 @@ export default function HomePage() {
             <div className="space-y-4">
               {wallets.map((wallet) => (
                 <div
-                  key={wallet.id}
+                  key={wallet.walletId}
                   className="flex flex-col gap-2 rounded-lg border p-4"
                 >
                   <div className="flex items-center justify-between">
                     <code className="text-sm font-mono">
-                      {wallet.walletAddress}
+                      {wallet.address}
                     </code>
                   </div>
-                  {wallet.reports && wallet.reports.length > 0 ? (
+                  {wallet.availablePeriods && wallet.availablePeriods.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {wallet.reports.map((report) => (
+                      {wallet.availablePeriods.map((period) => (
                         <Button
-                          key={report.period}
+                          key={period}
                           variant="secondary"
                           size="sm"
-                          onClick={() => handleViewReport(wallet, report.period)}
+                          onClick={() => handleViewReport(wallet, period)}
                         >
-                          {report.period}
+                          {period}
                         </Button>
                       ))}
                     </div>
