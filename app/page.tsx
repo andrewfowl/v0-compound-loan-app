@@ -261,10 +261,10 @@ function DashboardContent() {
                       <Badge 
                         variant="outline" 
                         className={`text-xs ${
-                          act.type === "Supply" ? "border-emerald-500/50 text-emerald-500" :
-                          act.type === "Borrow" ? "border-blue-500/50 text-blue-500" :
-                          act.type === "Repay" ? "border-amber-500/50 text-amber-500" :
-                          "border-red-500/50 text-red-500"
+                          act.type === "Supply" ? "border-success/50 text-success" :
+                          act.type === "Borrow" ? "border-foreground/30 text-foreground/70" :
+                          act.type === "Repay" ? "border-warning/50 text-warning" :
+                          "border-destructive/50 text-destructive"
                         }`}
                       >
                         {act.type}
@@ -312,14 +312,14 @@ function DashboardContent() {
                   <td className="px-4 py-3">{job.period}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {job.status === "completed" && <CheckCircle2 className="size-4 text-emerald-500" />}
-                      {job.status === "processing" && <Loader2 className="size-4 text-blue-500 animate-spin" />}
+                      {job.status === "completed" && <CheckCircle2 className="size-4 text-success" />}
+                      {job.status === "processing" && <Loader2 className="size-4 text-foreground/70 animate-spin" />}
                       {job.status === "queued" && <Clock className="size-4 text-muted-foreground" />}
-                      {job.status === "failed" && <AlertCircle className="size-4 text-red-500" />}
+                      {job.status === "failed" && <AlertCircle className="size-4 text-destructive" />}
                       <span className={`text-sm capitalize ${
-                        job.status === "completed" ? "text-emerald-500" :
-                        job.status === "processing" ? "text-blue-500" :
-                        job.status === "failed" ? "text-red-500" :
+                        job.status === "completed" ? "text-success" :
+                        job.status === "processing" ? "text-foreground/70" :
+                        job.status === "failed" ? "text-destructive" :
                         "text-muted-foreground"
                       }`}>
                         {job.status}
@@ -330,7 +330,7 @@ function DashboardContent() {
                     {job.status === "processing" && job.progress !== undefined ? (
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
+                          <div className="h-full bg-foreground/50 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
                         </div>
                         <span className="text-xs text-muted-foreground">{job.progress}%</span>
                       </div>
@@ -341,7 +341,7 @@ function DashboardContent() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right text-muted-foreground text-xs">
-                    {new Date(job.startedAt).toLocaleTimeString()}
+                    {job.startedAt.slice(11, 16)} UTC
                   </td>
                 </tr>
               ))}
