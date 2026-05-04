@@ -22,24 +22,24 @@ export function CollateralRiskBanner({ borrowerRecon }: CollateralRiskBannerProp
 
   const cfg =
     ltv >= 0.80 ? {
-      border: "border-red-300 dark:border-red-800",
-      bg: "bg-red-50 dark:bg-red-950/30",
+      border: "border-destructive/40",
+      bg: "bg-destructive-muted",
       title: "CRITICAL — Collateral Seizure Imminent",
       body: "LTV has breached 80%. Liquidators can seize your collateral now.",
-      ltvColor: "text-red-500",
+      ltvColor: "text-destructive",
     } :
     ltv >= 0.65 ? {
-      border: "border-amber-300 dark:border-amber-800",
-      bg: "bg-amber-50 dark:bg-amber-950/20",
+      border: "border-warning/40",
+      bg: "bg-warning-muted",
       title: "AT RISK — Collateral May Be Seized",
       body: `Only ${formatUsd(bufferUsd)} separates you from the 80% liquidation threshold.`,
-      ltvColor: "text-amber-500",
+      ltvColor: "text-warning",
     } : {
-      border: "border-yellow-300 dark:border-yellow-800",
-      bg: "bg-yellow-50 dark:bg-yellow-950/10",
+      border: "border-warning/30",
+      bg: "bg-warning-muted/50",
       title: "MONITOR — Collateral Under Pressure",
       body: `LTV is ${(ltv * 100).toFixed(1)}%. A further price move or withdrawal could push you into the at-risk zone.`,
-      ltvColor: "text-yellow-500",
+      ltvColor: "text-warning/80",
     }
 
   return (
@@ -72,14 +72,14 @@ export function CollateralRiskBanner({ borrowerRecon }: CollateralRiskBannerProp
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Collateral at Risk</p>
-            <p className="font-mono font-bold text-sm text-red-500">
+            <p className="font-mono font-bold text-sm text-negative">
               {formatUsd(atRiskUsd)}
               <span className="text-muted-foreground font-normal text-[10px] ml-1">({pctAtRisk.toFixed(0)}% of total)</span>
             </p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Buffer to Liquidation</p>
-            <p className={`font-mono font-bold text-sm ${bufferUsd <= 0 ? "text-red-500" : ""}`}>
+            <p className={`font-mono font-bold text-sm ${bufferUsd <= 0 ? "text-destructive" : ""}`}>
               {bufferUsd <= 0 ? "LIQUIDATABLE NOW" : formatUsd(bufferUsd)}
             </p>
           </div>

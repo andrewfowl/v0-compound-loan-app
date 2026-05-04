@@ -148,11 +148,11 @@ function TransactionsContent() {
 
   const getEventColor = (type: string) => {
     switch (type) {
-      case "Supply": return "border-emerald-500/50 text-emerald-500 bg-emerald-500/10"
-      case "Borrow": return "border-blue-500/50 text-blue-500 bg-blue-500/10"
-      case "Repay": return "border-amber-500/50 text-amber-500 bg-amber-500/10"
-      case "Withdraw": return "border-red-500/50 text-red-500 bg-red-500/10"
-      case "Liquidation": return "border-purple-500/50 text-purple-500 bg-purple-500/10"
+      case "Supply": return "border-positive/50 text-positive bg-success-muted"
+      case "Borrow": return "border-foreground/30 text-foreground/70 bg-muted"
+      case "Repay": return "border-warning/50 text-warning bg-warning-muted"
+      case "Withdraw": return "border-negative/50 text-negative bg-destructive-muted"
+      case "Liquidation": return "border-destructive/50 text-destructive bg-destructive-muted"
       default: return "border-muted-foreground/50 text-muted-foreground"
     }
   }
@@ -167,7 +167,7 @@ function TransactionsContent() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="gap-1.5">
-            <span className="size-2 rounded-full bg-emerald-500" />
+            <span className="size-2 rounded-full bg-success" />
             Ethereum
           </Badge>
           <Badge variant="outline">Compound v3</Badge>
@@ -183,8 +183,8 @@ function TransactionsContent() {
       <Card className="bg-muted/30 border-border/60">
         <CardContent className="flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10">
-              <Download className="size-5 text-emerald-500" />
+            <div className="flex size-10 items-center justify-center rounded-lg bg-success-muted">
+              <Download className="size-5 text-success" />
             </div>
             <div>
               <p className="font-semibold text-sm">Wallet imported successfully</p>

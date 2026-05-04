@@ -11,13 +11,13 @@ export interface AnimatedStatusBadgeProps {
 }
 
 const STATUS_CONFIG: Record<string, { type: "low" | "monitor" | "at-risk" | "critical" | "success" | "loading" | "info"; color: string; bgColor: string }> = {
-  low: { type: "safe", color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900/30" },
-  monitor: { type: "monitor", color: "text-yellow-600 dark:text-yellow-400", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
-  "at-risk": { type: "at-risk", color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
-  critical: { type: "liquidation", color: "text-red-600 dark:text-red-400", bgColor: "bg-red-100 dark:bg-red-900/30" },
-  success: { type: "success", color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900/30" },
-  loading: { type: "loading", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
-  info: { type: "info", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
+  low: { type: "safe", color: "text-success", bgColor: "bg-success-muted" },
+  monitor: { type: "monitor", color: "text-warning", bgColor: "bg-warning-muted" },
+  "at-risk": { type: "at-risk", color: "text-warning", bgColor: "bg-warning-muted" },
+  critical: { type: "liquidation", color: "text-destructive", bgColor: "bg-destructive-muted" },
+  success: { type: "success", color: "text-success", bgColor: "bg-success-muted" },
+  loading: { type: "loading", color: "text-muted-foreground", bgColor: "bg-muted" },
+  info: { type: "info", color: "text-muted-foreground", bgColor: "bg-muted" },
 }
 
 export function AnimatedStatusBadge({ status, label, size = "md", showIcon = true }: AnimatedStatusBadgeProps) {

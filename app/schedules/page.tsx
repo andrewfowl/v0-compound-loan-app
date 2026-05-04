@@ -101,7 +101,7 @@ function SchedulesContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono tracking-tight text-emerald-500">{formatUsd(8648180)}</p>
+            <p className="text-2xl font-bold font-mono tracking-tight text-positive">{formatUsd(8648180)}</p>
             <p className="text-xs text-muted-foreground mt-1">As of Mar 31, 2025</p>
           </CardContent>
         </Card>
@@ -113,7 +113,7 @@ function SchedulesContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono tracking-tight text-red-500">{formatUsd(16854)}</p>
+            <p className="text-2xl font-bold font-mono tracking-tight text-negative">{formatUsd(16854)}</p>
             <p className="text-xs text-muted-foreground mt-1">Q1 2025 YTD</p>
           </CardContent>
         </Card>
@@ -125,7 +125,7 @@ function SchedulesContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono tracking-tight text-emerald-500">231%</p>
+            <p className="text-2xl font-bold font-mono tracking-tight text-positive">231%</p>
             <p className="text-xs text-muted-foreground mt-1">Collateral / Loan</p>
           </CardContent>
         </Card>
@@ -178,9 +178,9 @@ function SchedulesContent() {
                     >
                       <td className="px-4 py-3 font-medium">{row.period}</td>
                       <td className="px-4 py-3 text-right font-mono">{formatUsd(row.startBalance)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-blue-500">{row.additions > 0 ? `+${formatUsd(row.additions)}` : "—"}</td>
-                      <td className="px-4 py-3 text-right font-mono text-red-500">{row.accruals > 0 ? `+${formatUsd(row.accruals)}` : "—"}</td>
-                      <td className="px-4 py-3 text-right font-mono text-emerald-500">{row.reductions > 0 ? `-${formatUsd(row.reductions)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-foreground/70">{row.additions > 0 ? `+${formatUsd(row.additions)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-negative">{row.accruals > 0 ? `+${formatUsd(row.accruals)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-positive">{row.reductions > 0 ? `-${formatUsd(row.reductions)}` : "—"}</td>
                       <td className="px-4 py-3 text-right font-mono font-semibold">{formatUsd(row.endBalance)}</td>
                     </tr>
                   ))}
@@ -221,9 +221,9 @@ function SchedulesContent() {
                     >
                       <td className="px-4 py-3 font-medium">{row.period}</td>
                       <td className="px-4 py-3 text-right font-mono">{formatUsd(row.startBalance)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-emerald-500">{row.additions > 0 ? `+${formatUsd(row.additions)}` : "—"}</td>
-                      <td className="px-4 py-3 text-right font-mono text-emerald-500">{row.accruals > 0 ? `+${formatUsd(row.accruals)}` : "—"}</td>
-                      <td className="px-4 py-3 text-right font-mono text-red-500">{row.reductions > 0 ? `-${formatUsd(row.reductions)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-positive">{row.additions > 0 ? `+${formatUsd(row.additions)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-positive">{row.accruals > 0 ? `+${formatUsd(row.accruals)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-negative">{row.reductions > 0 ? `-${formatUsd(row.reductions)}` : "—"}</td>
                       <td className="px-4 py-3 text-right font-mono font-semibold">{formatUsd(row.endBalance)}</td>
                     </tr>
                   ))}

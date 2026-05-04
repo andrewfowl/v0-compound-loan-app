@@ -149,17 +149,17 @@ function PositionsContent() {
   const netPosition = totalSupplied - totalBorrowed
 
   const getHealthColor = (hf: number) => {
-    if (hf >= 2) return "text-emerald-500"
-    if (hf >= 1.5) return "text-green-500"
-    if (hf >= 1.2) return "text-amber-500"
-    return "text-red-500"
+    if (hf >= 2) return "text-success"
+    if (hf >= 1.5) return "text-success"
+    if (hf >= 1.2) return "text-warning"
+    return "text-destructive"
   }
 
   const getHealthBadge = (hf: number) => {
-    if (hf >= 2) return { label: "Safe", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
-    if (hf >= 1.5) return { label: "Healthy", color: "bg-green-500/10 text-green-500 border-green-500/30" }
-    if (hf >= 1.2) return { label: "Monitor", color: "bg-amber-500/10 text-amber-500 border-amber-500/30" }
-    return { label: "At Risk", color: "bg-red-500/10 text-red-500 border-red-500/30" }
+    if (hf >= 2) return { label: "Safe", color: "bg-success-muted text-success border-success/30" }
+    if (hf >= 1.5) return { label: "Healthy", color: "bg-success-muted text-success border-success/30" }
+    if (hf >= 1.2) return { label: "Monitor", color: "bg-warning-muted text-warning border-warning/30" }
+    return { label: "At Risk", color: "bg-destructive-muted text-destructive border-destructive/30" }
   }
 
   return (
@@ -191,7 +191,7 @@ function PositionsContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold font-mono tracking-tight ${netPosition >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+            <p className={`text-2xl font-bold font-mono tracking-tight ${netPosition >= 0 ? "text-positive" : "text-negative"}`}>
               {netPosition >= 0 ? "+" : ""}{formatUsd(netPosition)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Supply - Borrow</p>
@@ -202,12 +202,12 @@ function PositionsContent() {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               Total Supplied
-              <TrendingUp className="size-3 text-emerald-500" />
+              <TrendingUp className="size-3 text-positive" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono tracking-tight">{formatUsd(totalSupplied)}</p>
-            <p className="text-xs text-emerald-500 mt-1">+{formatUsd(totalInterestEarned)} interest earned</p>
+            <p className="text-xs text-positive mt-1">+{formatUsd(totalInterestEarned)} interest earned</p>
           </CardContent>
         </Card>
 
@@ -215,12 +215,12 @@ function PositionsContent() {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               Total Borrowed
-              <TrendingDown className="size-3 text-red-500" />
+              <TrendingDown className="size-3 text-negative" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono tracking-tight">{formatUsd(totalBorrowed)}</p>
-            <p className="text-xs text-red-500 mt-1">-{formatUsd(totalInterestOwed)} interest owed</p>
+            <p className="text-xs text-negative mt-1">-{formatUsd(totalInterestOwed)} interest owed</p>
           </CardContent>
         </Card>
 
@@ -228,11 +228,11 @@ function PositionsContent() {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               Avg Health Factor
-              <Shield className="size-3 text-emerald-500" />
+              <Shield className="size-3 text-success" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold font-mono tracking-tight text-emerald-500">1.62x</p>
+            <p className="text-2xl font-bold font-mono tracking-tight text-success">1.62x</p>
             <p className="text-xs text-muted-foreground mt-1">Across all positions</p>
           </CardContent>
         </Card>

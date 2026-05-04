@@ -19,12 +19,12 @@ interface CollateralTabProps {
 }
 
 function SeizureRiskBadge({ risk, item }: { risk: string; item: string }) {
-  if (item === "Redeem") return <span className="text-[10px] text-green-600 font-semibold">WITHDRAWN</span>
-  if (risk === "healthy") return <span className="text-[10px] text-green-600 font-semibold">SAFE</span>
+  if (item === "Redeem") return <span className="text-[10px] text-success font-semibold">WITHDRAWN</span>
+  if (risk === "healthy") return <span className="text-[10px] text-success font-semibold">SAFE</span>
   const cfg =
-    risk === "critical" ? { label: "SEIZABLE", cls: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" } :
-    risk === "at-risk" ? { label: "AT RISK", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" } :
-    { label: "MONITOR", cls: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" }
+    risk === "critical" ? { label: "SEIZABLE", cls: "bg-destructive-muted text-destructive" } :
+    risk === "at-risk" ? { label: "AT RISK", cls: "bg-warning-muted text-warning" } :
+    { label: "MONITOR", cls: "bg-warning-muted/50 text-warning/80" }
   return (
     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${cfg.cls}`}>
       {cfg.label}
@@ -118,7 +118,7 @@ export function CollateralTab({ collateralLedger, borrowerRecon, dataSource = "c
                             {group.periodLabel}
                             <span className="ml-2 text-xs font-normal text-muted-foreground">
                               ({group.rows.filter(r => !r.calculated).length} txn{group.rows.filter(r => !r.calculated).length !== 1 ? "s" : ""}
-                              {group.rows.some(r => r.calculated) && <span className="text-emerald-600/70 dark:text-emerald-400/70"> + {group.rows.filter(r => r.calculated).length} est.</span>})
+                              {group.rows.some(r => r.calculated) && <span className="text-positive/70"> + {group.rows.filter(r => r.calculated).length} est.</span>})
                             </span>
                           </TableCell>
                           <TableCell className="text-right font-mono">{formatLedgerValue(group.subtotals.startBalance, group.subtotals.startBalance < 0)}</TableCell>
@@ -135,7 +135,7 @@ export function CollateralTab({ collateralLedger, borrowerRecon, dataSource = "c
                           <TableRow
                             key={`${group.periodLabel}-${idx}`}
                             className={entry.calculated
-                              ? "bg-emerald-500/5 hover:bg-emerald-500/10 italic"
+                              ? "bg-success-muted/30 hover:bg-success-muted/50 italic"
                               : "bg-background hover:bg-muted/20"
                             }
                           >
@@ -146,7 +146,7 @@ export function CollateralTab({ collateralLedger, borrowerRecon, dataSource = "c
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-1 text-emerald-600/80 dark:text-emerald-400/80 cursor-help">
+                                      <span className="inline-flex items-center gap-1 text-positive/80 cursor-help">
                                         {entry.item}
                                         <HelpCircle className="size-3" />
                                       </span>

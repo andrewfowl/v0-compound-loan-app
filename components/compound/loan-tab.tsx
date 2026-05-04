@@ -19,12 +19,12 @@ interface LoanTabProps {
 }
 
 function RiskBadge({ risk, item }: { risk: string; item: string }) {
-  if (item === "Paid by borrower") return <span className="text-[10px] text-green-600 font-semibold">PAID</span>
+  if (item === "Paid by borrower") return <span className="text-[10px] text-success font-semibold">PAID</span>
   const cfg =
-    risk === "critical" ? { label: "CRITICAL", cls: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" } :
-    risk === "at-risk" ? { label: "AT RISK", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" } :
-    risk === "monitor" ? { label: "MONITOR", cls: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" } :
-    { label: "LOW", cls: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" }
+    risk === "critical" ? { label: "CRITICAL", cls: "bg-destructive-muted text-destructive" } :
+    risk === "at-risk" ? { label: "AT RISK", cls: "bg-warning-muted text-warning" } :
+    risk === "monitor" ? { label: "MONITOR", cls: "bg-warning-muted/50 text-warning/80" } :
+    { label: "LOW", cls: "bg-success-muted text-success" }
   return (
     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${cfg.cls}`}>
       {cfg.label}
