@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,70 +19,17 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react"
-
-// Sample wallet addresses
-const SAMPLE_WALLETS = [
-  { address: "0xd043c56861F3e80b2C5580d7044a6771F802565D", label: "Treasury 1" },
-  { address: "0x462cbA2dC7e2709143BcaCC86ec106354cf82108", label: "Treasury 2" },
-  { address: "0xCB1096E77d6eAb734ffCEced1Fcd2D35EE6b8d15", label: "Operations" },
-]
-
-type JobStatus = "queued" | "processing" | "completed" | "failed"
-
-interface Job {
-  id: string
-  walletAddress: string
-  status: JobStatus
-  period: string
-  startedAt: string
-  completedAt?: string
-  progress?: number
-}
-
-interface WalletPosition {
-  asset: string
-  protocol: string
-  protocolVersion: "v2" | "v3"
-  principal: number
-  principalUsd: number
-  collateralRatio: number
-}
-
-interface RecentActivity {
-  date: string
-  type: "Supply" | "Borrow" | "Repay" | "Withdraw"
-  asset: string
-  amount: number
-}
-
-// Mock data for demo
-const mockJobs: Job[] = [
-  { id: "job_1", walletAddress: "0xd043...565D", status: "completed", period: "2025-03", startedAt: "2025-03-28T10:00:00Z", completedAt: "2025-03-28T10:02:30Z" },
-  { id: "job_2", walletAddress: "0x462c...2108", status: "processing", period: "2025-03", startedAt: "2025-03-28T10:05:00Z", progress: 67 },
-  { id: "job_3", walletAddress: "0xCB10...8d15", status: "queued", period: "2025-03", startedAt: "2025-03-28T10:06:00Z" },
-]
-
-const mockPositions: WalletPosition[] = [
-  { asset: "USDC", protocol: "cUSDCv3", protocolVersion: "v3", principal: 2847500, principalUsd: 2847500, collateralRatio: 149 },
-  { asset: "USDC", protocol: "cUSDC", protocolVersion: "v2", principal: 1100000, principalUsd: 1100000, collateralRatio: 128 },
-  { asset: "ETH", protocol: "cETH", protocolVersion: "v2", principal: 0.077, principalUsd: 270900, collateralRatio: 210 },
-]
-
-const mockActivity: RecentActivity[] = [
-  { date: "Mar 28", type: "Repay", asset: "USDC", amount: 500000 },
-  { date: "Mar 15", type: "Supply", asset: "WBTC", amount: 240000 },
-  { date: "Mar 02", type: "Borrow", asset: "USDC", amount: 1100000 },
-  { date: "Feb 18", type: "Supply", asset: "ETH", amount: 3200000 },
-  { date: "Feb 01", type: "Borrow", asset: "USDC", amount: 2847500 },
-]
-
-function formatAddress(addr: string) {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-}
-
-function formatUsd(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
-}
+import {
+  SAMPLE_WALLETS,
+  mockJobs,
+  mockPositions,
+  mockActivity,
+  formatAddress,
+  formatUsd,
+  type Job,
+  type WalletPosition,
+  type RecentActivity,
+} from "@/lib/mock-data"
 
 function DashboardContent() {
   const router = useRouter()
