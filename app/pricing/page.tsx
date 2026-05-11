@@ -27,7 +27,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
-import {
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AppShell } from "@/components/app-shell"
   HelpCircle,
   RefreshCw,
   Plus,
@@ -36,6 +37,7 @@ import {
   X,
   ExternalLink,
   Info,
+  ChevronDown,
 } from "lucide-react"
 
 const LEVEL_CONFIGS = {
@@ -183,9 +185,65 @@ export default function PricingDataPage() {
   entries.forEach((e) => { levelCounts[e.level]++ })
   const totalFvAdj = entries.reduce((sum, e) => sum + fvAdj(e), 0)
 
+  const assetTypes = ["All Assets", "Collateral", "Borrowed", "Accrued Interest"]
+  const [selectedAssetType, setSelectedAssetType] = useState<string>("All Assets")
+
   return (
+    <AppShell>
+      <div className="flex h-full gap-4">
+        {/* Left Sidebar */}
+        <div className="w-48 border-r border-border flex flex-col shrink-0 overflow-hidden">
+          <div className="px-3 py-3 border-b border-border/50">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filter By Type</Label>
+            <div className="mt-2 space-y-1">
+              {assetTypes.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedAssetType(type)}
+                  className={`w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors ${
+                    selectedAssetType === type
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-foreground/70 hover:bg-muted/50"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="px-3 py-3 border-b border-border/50">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hierarchy Levels</Label>
+            <div className="mt-2 space-y-1">
+              {(["1", "2", "3"] as const).map((lvl) => {
+                const count = levelCounts[lvl]
+                const cfg = LEVEL_CONFIGS[lvl]
+                return (
+                  <div key={lvl} className="flex items-center gap-2 px-2 py-1.5 text-xs rounded-md bg-muted/25">
+                    <span className={`px-1 py-0.5 rounded text-[10px] font-mono font-semibold ${cfg.badgeClass}`}>
+                      {cfg.label}
+                    </span>
+                    <span className="text-muted-foreground ml-auto">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="px-3 py-3 flex-1 overflow-y-auto">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assets ({entries.length})</Label>
+            <div className="mt-2 space-y-0.5">
+              {entries.map((entry) => (
+                <div key={entry.symbol} className="px-2 py-1.5 text-xs rounded-md hover:bg-muted/50 cursor-default">
+                  <div className="font-mono font-semibold text-foreground">{entry.symbol}</div>
+                  <div className="text-muted-foreground text-[11px] line-clamp-1">{entry.asset}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto space-y-6 pb-6 px-4">
     <TooltipProvider>
-      <div className="space-y-6">
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -594,5 +652,7 @@ export default function PricingDataPage() {
 
       </div>
     </TooltipProvider>
+      </div>
+    </AppShell>
   )
 }
