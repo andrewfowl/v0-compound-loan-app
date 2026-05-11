@@ -29,6 +29,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AppShell } from "@/components/app-shell"
+import {
   HelpCircle,
   RefreshCw,
   Plus,
@@ -243,7 +244,7 @@ export default function PricingDataPage() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto space-y-6 pb-6 px-4">
-    <TooltipProvider>
+          <TooltipProvider>
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -650,8 +651,8 @@ export default function PricingDataPage() {
           </p>
         </div>
 
-      </div>
-    </TooltipProvider>
+          </TooltipProvider>
+        </div>
       </div>
     </AppShell>
   )
