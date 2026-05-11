@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,26 +21,10 @@ import {
   AlertCircle,
   ChevronLeft,
   RotateCw,
+  Download,
+  ExternalLink,
 } from "lucide-react"
-
-interface Job {
-  id: string
-  walletAddress: string
-  status: "completed" | "processing" | "queued" | "failed"
-  period: string
-  startedAt: string
-  completedAt?: string
-  progress?: number
-}
-
-const mockJobs: Job[] = [
-  { id: "job_1", walletAddress: "0xd043...565D", status: "completed", period: "2025-03", startedAt: "2025-03-28T10:00:00Z", completedAt: "2025-03-28T10:02:30Z" },
-  { id: "job_2", walletAddress: "0x462c...2108", status: "processing", period: "2025-03", startedAt: "2025-03-28T10:05:00Z", progress: 67 },
-  { id: "job_3", walletAddress: "0xCB10...8d15", status: "queued", period: "2025-03", startedAt: "2025-03-28T10:06:00Z" },
-  { id: "job_4", walletAddress: "0x1f2c...9a1f", status: "completed", period: "2025-02", startedAt: "2025-02-28T14:30:00Z", completedAt: "2025-02-28T14:35:15Z" },
-  { id: "job_5", walletAddress: "0x3d4e...5b2a", status: "failed", period: "2025-02", startedAt: "2025-02-27T09:15:00Z" },
-  { id: "job_6", walletAddress: "0x2e5f...7c3d", status: "completed", period: "2025-01", startedAt: "2025-01-31T11:45:00Z", completedAt: "2025-01-31T11:52:00Z" },
-]
+import { mockJobs, formatAddress, type Job } from "@/lib/mock-data"
 
 export default function JobsPage() {
   const [jobs] = useState<Job[]>(mockJobs)
@@ -132,20 +117,29 @@ export default function JobsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/10 hover:bg-muted/10 border-b border-border/50">
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider">ID</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">Wallet</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">Network</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">Period</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">Progress</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider">Started</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider">Completed</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">Reports</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {jobs.map((job) => (
                     <TableRow key={job.id} className="border-b border-border/30 hover:bg-muted/25 transition-colors">
-                      <TableCell className="text-xs font-mono text-foreground/70">{job.id}</TableCell>
-                      <TableCell className="text-xs font-mono font-semibold">{job.walletAddress}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold">{job.walletLabel || "Unknown"}</span>
+                          <span className="text-[11px] text-muted-foreground font-mono">{formatAddress(job.walletAddress)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] font-medium">
+                          {job.network || "Ethereum"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-xs font-mono">{job.period}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -176,18 +170,35 @@ export default function JobsPage() {
                           </div>
                         ) : job.status === "completed" ? (
                           <span className="text-xs text-muted-foreground">100%</span>
+                        ) : job.status === "failed" ? (
+                          <span className="text-xs text-destructive">Error</span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">0%</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(job.startedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      <TableCell className="text-xs font-mono">
+                        {job.reportsGenerated ? (
+                          <span className="text-foreground">{job.reportsGenerated}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {job.completedAt 
-                          ? new Date(job.completedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                          : "—"
-                        }
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {job.status === "completed" && (
+                            <Button variant="ghost" size="icon" className="size-7">
+                              <Download className="size-3.5" />
+                            </Button>
+                          )}
+                          {job.status === "failed" && (
+                            <Button variant="ghost" size="icon" className="size-7">
+                              <RotateCw className="size-3.5" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="size-7">
+                            <ExternalLink className="size-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
