@@ -30,6 +30,12 @@ export interface LoanLedgerEntry {
   txHash: string
   eventName: string
   riskAtTime: RiskLevel
+  /** True when this row is a calculated interest accrual, not an on-chain event */
+  calculated?: boolean
+  /** APR used to estimate this accrual, e.g. 0.05 for 5% */
+  calculatedApr?: number
+  /** Number of days over which the accrual was estimated */
+  calculatedDays?: number
 }
 
 export interface CollateralLedgerEntry {
@@ -45,6 +51,12 @@ export interface CollateralLedgerEntry {
   txHash: string
   eventName: string
   riskAtTime: RiskLevel
+  /** True when this row is a calculated interest accrual, not an on-chain event */
+  calculated?: boolean
+  /** APR used to estimate this accrual, e.g. 0.04 for 4% */
+  calculatedApr?: number
+  /** Number of days over which the accrual was estimated */
+  calculatedDays?: number
 }
 
 export interface PeriodGroup<T> {
@@ -63,6 +75,7 @@ export interface JournalEntry {
   usdAmount: number
   asset: string
   computed: boolean  // true for calculated entries like FV adjustments
+  txHash?: string    // on-chain tx hash; absent for computed/manual entries
 }
 
 // Monthly reconciliation group

@@ -52,8 +52,8 @@ export function AppShell({ children }: AppShellProps) {
         <AppSidebar userId={userId} onUserSwitch={handleUserSwitch} />
         <SidebarInset className="flex flex-1 flex-col">
           <AppHeader />
-          <main className="flex-1 overflow-auto">
-            <div className="mx-auto h-full w-full max-w-7xl p-6">
+          <main className="flex-1 overflow-auto bg-background">
+            <div className="mx-auto w-full max-w-full p-6">
               <ErrorBoundary>
                 {children}
               </ErrorBoundary>
