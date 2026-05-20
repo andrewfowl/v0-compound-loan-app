@@ -78,10 +78,10 @@ const accountingNavItems = [
     description: "Loan & collateral rollforward",
   },
   {
-    title: "Pricing Data",
+    title: "Fair Value",
     url: "/pricing",
     icon: DollarSign,
-    description: "ASC 820 price sources",
+    description: "ASC 820 historical price inputs",
   },
 ]
 
