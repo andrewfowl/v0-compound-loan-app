@@ -16,8 +16,11 @@ import {
   AlertCircle,
   Loader2,
   Inbox,
+  Plus,
+  Wallet,
 } from "lucide-react"
 import {
+  SAMPLE_WALLETS,
   mockPositions,
   mockActivity,
   formatAddress,
