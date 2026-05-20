@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,43 +10,83 @@ import { AppShell } from "@/components/app-shell"
 import { 
   RefreshCw,
   Download,
-  Wallet,
-  TrendingUp,
   Clock,
-  FileText,
-  Plus,
   ChevronRight,
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Inbox,
 } from "lucide-react"
 import {
-  SAMPLE_WALLETS,
-  mockJobs,
   mockPositions,
   mockActivity,
   formatAddress,
   formatUsd,
-  type Job,
   type WalletPosition,
   type RecentActivity,
 } from "@/lib/mock-data"
 
+// Normalize backend job shape — same logic as jobs/page.tsx
+interface BackendJob {
+  id?: string; jobId?: string
+  walletAddress?: string; wallet_address?: string
+  status?: string; state?: string
+  period?: string; reportEndMonth?: string; report_end_month?: string
+  startedAt?: string; started_at?: string; createdAt?: string; created_at?: string
+  progress?: number
+}
+interface NormalizedJob {
+  id: string; walletAddress: string
+  status: "queued" | "processing" | "completed" | "failed"
+  period: string; startedAt: string; progress?: number
+}
+function normalizeStatus(raw?: string): NormalizedJob["status"] {
+  const s = (raw ?? "").toLowerCase()
+  if (s === "completed" || s === "done" || s === "success") return "completed"
+  if (s === "processing" || s === "running" || s === "in_progress") return "processing"
+  if (s === "failed" || s === "error") return "failed"
+  return "queued"
+}
+function normalizeJob(j: BackendJob): NormalizedJob {
+  return {
+    id: j.id ?? j.jobId ?? crypto.randomUUID(),
+    walletAddress: j.walletAddress ?? j.wallet_address ?? "",
+    status: normalizeStatus(j.status ?? j.state),
+    period: j.period ?? j.reportEndMonth ?? j.report_end_month ?? "—",
+    startedAt: j.startedAt ?? j.started_at ?? j.createdAt ?? j.created_at ?? new Date().toISOString(),
+    progress: j.progress,
+  }
+}
+
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+
 function DashboardContent() {
   const router = useRouter()
-  const [jobs] = useState<Job[]>(mockJobs)
   const [positions] = useState<WalletPosition[]>(mockPositions)
   const [activity] = useState<RecentActivity[]>(mockActivity)
   const [syncing, setSyncing] = useState(false)
 
-  // Calculate totals
+  const { data: jobsData, isLoading: jobsLoading, mutate: mutateJobs } = useSWR(
+    "/api/indexing/jobs",
+    fetcher,
+    { refreshInterval: 30000 }
+  )
+
+  const rawJobs: BackendJob[] = Array.isArray(jobsData)
+    ? jobsData
+    : Array.isArray(jobsData?.jobs) ? jobsData.jobs
+    : Array.isArray(jobsData?.data) ? jobsData.data
+    : []
+  const jobs: NormalizedJob[] = rawJobs.map(normalizeJob)
+
   const totalBorrowed = positions.reduce((sum, p) => sum + p.principalUsd, 0)
-  const totalCollateral = 8640000 // Mock value
-  const accruedInterest = 38294 // Mock value
-  const openJeDrafts = 7 // Mock value
+  const totalCollateral = 8640000
+  const accruedInterest = 38294
+  const openJeDrafts = 7
 
   const handleSync = () => {
     setSyncing(true)
+    mutateJobs()
     setTimeout(() => setSyncing(false), 2000)
   }
 
@@ -95,7 +136,7 @@ function DashboardContent() {
           <CardContent>
             <p className="text-2xl font-bold font-mono tracking-tight">{formatUsd(totalCollateral)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-emerald-500">+$240k</span> since last period
+              <span className="text-positive">+$240k</span> since last period
             </p>
           </CardContent>
         </Card>
@@ -233,7 +274,7 @@ function DashboardContent() {
           <div>
             <CardTitle className="text-base font-semibold">Indexing Jobs</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {completedJobs} completed, {processingJobs} processing
+              {jobsLoading ? "Loading..." : `${completedJobs} completed, ${processingJobs} processing`}
             </p>
           </div>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => router.push("/jobs")}>
@@ -241,59 +282,70 @@ function DashboardContent() {
             <ChevronRight className="size-4" />
           </Button>
         </CardHeader>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50">
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Wallet</th>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Period</th>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Status</th>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Progress</th>
-                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Started</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-sm">{job.walletAddress}</td>
-                  <td className="px-4 py-3">{job.period}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {job.status === "completed" && <CheckCircle2 className="size-4 text-success" />}
-                      {job.status === "processing" && <Loader2 className="size-4 text-foreground/70 animate-spin" />}
-                      {job.status === "queued" && <Clock className="size-4 text-muted-foreground" />}
-                      {job.status === "failed" && <AlertCircle className="size-4 text-destructive" />}
-                      <span className={`text-sm capitalize ${
-                        job.status === "completed" ? "text-success" :
-                        job.status === "processing" ? "text-foreground/70" :
-                        job.status === "failed" ? "text-destructive" :
-                        "text-muted-foreground"
-                      }`}>
-                        {job.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {job.status === "processing" && job.progress !== undefined ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-foreground/50 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
-                        </div>
-                        <span className="text-xs text-muted-foreground">{job.progress}%</span>
-                      </div>
-                    ) : job.status === "completed" ? (
-                      <span className="text-xs text-muted-foreground">100%</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground text-xs">
-                    {job.startedAt.slice(11, 16)} UTC
-                  </td>
+        <CardContent>
+          {jobsLoading ? (
+            <div className="flex items-center gap-3 py-8 text-muted-foreground justify-center">
+              <Loader2 className="size-4 animate-spin" />
+              <span className="text-sm">Loading jobs...</span>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <Inbox className="size-7 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No indexing jobs yet</p>
+              <p className="text-xs text-muted-foreground/70">Jobs will appear here once wallets are added.</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/50">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Wallet</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Period</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Status</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Progress</th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2">Started</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {jobs.slice(0, 5).map((job) => (
+                  <tr key={job.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs">{formatAddress(job.walletAddress)}</td>
+                    <td className="px-4 py-3 text-xs">{job.period}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {job.status === "completed" && <CheckCircle2 className="size-4 text-success" />}
+                        {job.status === "processing" && <Loader2 className="size-4 text-primary animate-spin" />}
+                        {job.status === "queued" && <Clock className="size-4 text-muted-foreground" />}
+                        {job.status === "failed" && <AlertCircle className="size-4 text-destructive" />}
+                        <span className={`text-xs capitalize ${
+                          job.status === "completed" ? "text-success" :
+                          job.status === "processing" ? "text-primary" :
+                          job.status === "failed" ? "text-destructive" :
+                          "text-muted-foreground"
+                        }`}>{job.status}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {job.status === "processing" && job.progress !== undefined ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${job.progress}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground">{job.progress}%</span>
+                        </div>
+                      ) : job.status === "completed" ? (
+                        <span className="text-xs text-muted-foreground">100%</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-muted-foreground text-xs">
+                      {new Date(job.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
 
