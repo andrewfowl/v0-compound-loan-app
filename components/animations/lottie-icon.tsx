@@ -1,16 +1,17 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { ComponentProps, useMemo } from "react"
+import { useMemo } from "react"
 
 const LottieComponent = dynamic(() => import("lottie-react"), { ssr: false })
 
-export interface LottieIconProps extends Omit<ComponentProps<typeof LottieComponent>, "animationData"> {
+export interface LottieIconProps {
   type: "checkmark" | "error" | "warning" | "info" | "loading" | "success" | "liquidation" | "safe" | "monitor" | "at-risk"
   size?: "sm" | "md" | "lg" | "xl"
   loop?: boolean
   autoplay?: boolean
   speed?: number
+  className?: string
 }
 
 /**
@@ -874,9 +875,7 @@ export function LottieIcon({
   size = "md",
   loop = true,
   autoplay = true,
-  speed = 1,
   className,
-  ...props
 }: LottieIconProps) {
   const animationData = useMemo(() => LOTTIE_ANIMATIONS[type], [type])
   const sizePixels = SIZE_MAP[size]
@@ -890,10 +889,8 @@ export function LottieIcon({
       animationData={animationData}
       loop={loop}
       autoplay={autoplay}
-      speed={speed}
       style={{ width: sizePixels, height: sizePixels }}
       className={className}
-      {...props}
     />
   )
 }
