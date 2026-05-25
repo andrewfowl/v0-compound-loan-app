@@ -52,12 +52,23 @@ interface ScheduleRow {
   }
 }
 
+// Helper to format txHash for display
+function formatTxHash(hash: string): string {
+  if (hash === "—" || hash.length < 20) return hash
+  return `${hash.slice(0, 6)}...${hash.slice(-4)}`
+}
+
+// Helper to generate Etherscan link
+function getEtherscanUrl(txHash: string): string {
+  return `https://etherscan.io/tx/${txHash}`
+}
+
 // Mock transaction-level data that sums to the rollforward values
 const janLoanDetails: ScheduleRow["details"] = {
   additions: [
-    { id: "tx1", date: "2025-01-05", txHash: "0x1a2b...3c4d", wallet: "0xd043...565D", asset: "USDC", type: "Borrow", amount: 1500000, amountUsd: 1500000, protocol: "Compound v3" },
-    { id: "tx2", date: "2025-01-12", txHash: "0x2b3c...4d5e", wallet: "0xd043...565D", asset: "USDC", type: "Borrow", amount: 847500, amountUsd: 847500, protocol: "Compound v3" },
-    { id: "tx3", date: "2025-01-20", txHash: "0x3c4d...5e6f", wallet: "0x462c...2108", asset: "USDC", type: "Borrow", amount: 500000, amountUsd: 500000, protocol: "Compound v2" },
+    { id: "tx1", date: "2025-01-05", txHash: "0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890", wallet: "0xd043...565D", asset: "USDC", type: "Borrow", amount: 1500000, amountUsd: 1500000, protocol: "Compound v3" },
+    { id: "tx2", date: "2025-01-12", txHash: "0x2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567891", wallet: "0xd043...565D", asset: "USDC", type: "Borrow", amount: 847500, amountUsd: 847500, protocol: "Compound v3" },
+    { id: "tx3", date: "2025-01-20", txHash: "0x3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567892", wallet: "0x462c...2108", asset: "USDC", type: "Borrow", amount: 500000, amountUsd: 500000, protocol: "Compound v2" },
   ],
   accruals: [
     { id: "tx4", date: "2025-01-31", txHash: "—", wallet: "0xd043...565D", asset: "USDC", type: "Interest Accrual", amount: 2850, amountUsd: 2850, protocol: "Compound v3" },
@@ -68,8 +79,8 @@ const janLoanDetails: ScheduleRow["details"] = {
 
 const febLoanDetails: ScheduleRow["details"] = {
   additions: [
-    { id: "tx6", date: "2025-02-08", txHash: "0x4d5e...6f7g", wallet: "0xCB10...8d15", asset: "USDC", type: "Borrow", amount: 600000, amountUsd: 600000, protocol: "Compound v3" },
-    { id: "tx7", date: "2025-02-22", txHash: "0x5e6f...7g8h", wallet: "0xd043...565D", asset: "USDC", type: "Borrow", amount: 500000, amountUsd: 500000, protocol: "Compound v2" },
+    { id: "tx6", date: "2025-02-08", txHash: "0x4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567893", wallet: "0xCB10...8d15", asset: "USDC", type: "Borrow", amount: 600000, amountUsd: 600000, protocol: "Compound v3" },
+    { id: "tx7", date: "2025-02-22", txHash: "0x5e6f7890abcdef1234567890abcdef1234567890abcdef1234567894", wallet: "0xd043...565D", asset: "USDC", type: "Borrow", amount: 500000, amountUsd: 500000, protocol: "Compound v2" },
   ],
   accruals: [
     { id: "tx8", date: "2025-02-28", txHash: "—", wallet: "0xd043...565D", asset: "USDC", type: "Interest Accrual", amount: 5120, amountUsd: 5120, protocol: "Compound v3" },
@@ -81,7 +92,7 @@ const febLoanDetails: ScheduleRow["details"] = {
 
 const marLoanDetails: ScheduleRow["details"] = {
   additions: [
-    { id: "tx11", date: "2025-03-10", txHash: "0x6f7g...8h9i", wallet: "0xd043...565D", asset: "ETH", type: "Borrow", amount: 100, amountUsd: 270900, protocol: "Compound v2" },
+    { id: "tx11", date: "2025-03-10", txHash: "0x6f7890abcdef1234567890abcdef1234567890abcdef1234567895", wallet: "0xd043...565D", asset: "ETH", type: "Borrow", amount: 100, amountUsd: 270900, protocol: "Compound v2" },
   ],
   accruals: [
     { id: "tx12", date: "2025-03-31", txHash: "—", wallet: "0xd043...565D", asset: "USDC", type: "Interest Accrual", amount: 7200, amountUsd: 7200, protocol: "Compound v3" },
@@ -90,15 +101,15 @@ const marLoanDetails: ScheduleRow["details"] = {
     { id: "tx15", date: "2025-03-31", txHash: "—", wallet: "0xd043...565D", asset: "ETH", type: "Interest Accrual", amount: 494, amountUsd: 494, protocol: "Compound v2" },
   ],
   reductions: [
-    { id: "tx16", date: "2025-03-28", txHash: "0x7g8h...9i0j", wallet: "0xd043...565D", asset: "USDC", type: "Repayment", amount: 500000, amountUsd: 500000, protocol: "Compound v3" },
+    { id: "tx16", date: "2025-03-28", txHash: "0x7890abcdef1234567890abcdef1234567890abcdef1234567896", wallet: "0xd043...565D", asset: "USDC", type: "Repayment", amount: 500000, amountUsd: 500000, protocol: "Compound v3" },
   ],
 }
 
 // Collateral details
 const janCollateralDetails: ScheduleRow["details"] = {
   additions: [
-    { id: "ctx1", date: "2025-01-03", txHash: "0xa1b2...c3d4", wallet: "0xd043...565D", asset: "WBTC", type: "Supply Collateral", amount: 50, amountUsd: 2100000, protocol: "Compound v3" },
-    { id: "ctx2", date: "2025-01-15", txHash: "0xb2c3...d4e5", wallet: "0xd043...565D", asset: "ETH", type: "Supply Collateral", amount: 700, amountUsd: 2130000, protocol: "Compound v2" },
+    { id: "ctx1", date: "2025-01-03", txHash: "0xa1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef12345678a1", wallet: "0xd043...565D", asset: "WBTC", type: "Supply Collateral", amount: 50, amountUsd: 2100000, protocol: "Compound v3" },
+    { id: "ctx2", date: "2025-01-15", txHash: "0xb2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef12345678a2", wallet: "0xd043...565D", asset: "ETH", type: "Supply Collateral", amount: 700, amountUsd: 2130000, protocol: "Compound v2" },
   ],
   accruals: [
     { id: "ctx3", date: "2025-01-31", txHash: "—", wallet: "0xd043...565D", asset: "WBTC", type: "Supply Interest", amount: 0.02, amountUsd: 840, protocol: "Compound v3" },
@@ -109,8 +120,8 @@ const janCollateralDetails: ScheduleRow["details"] = {
 
 const febCollateralDetails: ScheduleRow["details"] = {
   additions: [
-    { id: "ctx5", date: "2025-02-05", txHash: "0xc3d4...e5f6", wallet: "0x462c...2108", asset: "ETH", type: "Supply Collateral", amount: 1200, amountUsd: 3600000, protocol: "Compound v3" },
-    { id: "ctx6", date: "2025-02-18", txHash: "0xd4e5...f6g7", wallet: "0xCB10...8d15", asset: "WBTC", type: "Supply Collateral", amount: 20, amountUsd: 837500, protocol: "Compound v2" },
+    { id: "ctx5", date: "2025-02-05", txHash: "0xc3d4e5f67890abcdef1234567890abcdef1234567890abcdef12345678a3", wallet: "0x462c...2108", asset: "ETH", type: "Supply Collateral", amount: 1200, amountUsd: 3600000, protocol: "Compound v3" },
+    { id: "ctx6", date: "2025-02-18", txHash: "0xd4e5f67890abcdef1234567890abcdef1234567890abcdef12345678a4", wallet: "0xCB10...8d15", asset: "WBTC", type: "Supply Collateral", amount: 20, amountUsd: 837500, protocol: "Compound v2" },
   ],
   accruals: [
     { id: "ctx7", date: "2025-02-28", txHash: "—", wallet: "0xd043...565D", asset: "WBTC", type: "Supply Interest", amount: 0.025, amountUsd: 1050, protocol: "Compound v3" },
@@ -129,7 +140,7 @@ const marCollateralDetails: ScheduleRow["details"] = {
     { id: "ctx13", date: "2025-03-31", txHash: "—", wallet: "0xCB10...8d15", asset: "WBTC", type: "Supply Interest", amount: 0.018, amountUsd: 755, protocol: "Compound v2" },
   ],
   reductions: [
-    { id: "ctx14", date: "2025-03-25", txHash: "0xe5f6...g7h8", wallet: "0xd043...565D", asset: "ETH", type: "Withdraw Collateral", amount: 9.1, amountUsd: 27760, protocol: "Compound v2" },
+    { id: "ctx14", date: "2025-03-25", txHash: "0xe5f67890abcdef1234567890abcdef1234567890abcdef12345678a5", wallet: "0xd043...565D", asset: "ETH", type: "Withdraw Collateral", amount: 9.1, amountUsd: 27760, protocol: "Compound v2" },
   ],
 }
 
@@ -322,6 +333,18 @@ function SchedulesContent() {
                           <span className="text-muted-foreground w-20">{tx.date}</span>
                           <span className="font-mono w-24">{tx.wallet}</span>
                           <span className="w-16">{tx.asset}</span>
+                          {tx.txHash !== "—" && (
+                            <a
+                              href={getEtherscanUrl(tx.txHash)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
+                              title={tx.txHash}
+                            >
+                              {formatTxHash(tx.txHash)}
+                              <ExternalLink className="size-2.5" />
+                            </a>
+                          )}
                           <span className="font-mono ml-auto">{formatUsd(tx.amountUsd)}</span>
                         </div>
                       ))}
@@ -347,6 +370,20 @@ function SchedulesContent() {
                           <span className="text-muted-foreground w-20">{tx.date}</span>
                           <span className="font-mono w-24">{tx.wallet}</span>
                           <span className="w-16">{tx.asset}</span>
+                          {tx.txHash !== "—" ? (
+                            <a
+                              href={getEtherscanUrl(tx.txHash)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
+                              title={tx.txHash}
+                            >
+                              {formatTxHash(tx.txHash)}
+                              <ExternalLink className="size-2.5" />
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground text-[11px]">accrued</span>
+                          )}
                           <span className="font-mono ml-auto">{formatUsd(tx.amountUsd)}</span>
                         </div>
                       ))}
@@ -364,6 +401,18 @@ function SchedulesContent() {
                           <span className="text-muted-foreground w-20">{tx.date}</span>
                           <span className="font-mono w-24">{tx.wallet}</span>
                           <span className="w-16">{tx.asset}</span>
+                          {tx.txHash !== "—" && (
+                            <a
+                              href={getEtherscanUrl(tx.txHash)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
+                              title={tx.txHash}
+                            >
+                              {formatTxHash(tx.txHash)}
+                              <ExternalLink className="size-2.5" />
+                            </a>
+                          )}
                           <span className="font-mono ml-auto">{formatUsd(tx.amountUsd)}</span>
                         </div>
                       ))}
@@ -613,9 +662,16 @@ function SchedulesContent() {
                     <td className="px-3 py-2 text-right font-mono">{formatUsd(tx.amountUsd)}</td>
                     <td className="px-3 py-2 text-center">
                       {tx.txHash !== "—" ? (
-                        <button className="text-primary hover:underline inline-flex items-center gap-1">
+                        <a 
+                          href={getEtherscanUrl(tx.txHash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                          title={tx.txHash}
+                        >
+                          <span className="font-mono text-xs">{formatTxHash(tx.txHash)}</span>
                           <ExternalLink className="size-3" />
-                        </button>
+                        </a>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
