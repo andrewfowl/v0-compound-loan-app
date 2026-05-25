@@ -141,18 +141,25 @@ function JournalEntriesContent() {
   const draftCount = allJournalEntries.filter(je => je.status === "Draft").length
   const pendingCount = allJournalEntries.filter(je => je.status === "Pending").length
 
-  // Handle approving a JE (only works for generated JEs from the store)
+  // Local state for mock JE approvals (since they're not in the store)
+  const [mockApprovals, setMockApprovals] = useState<Set<string>>(new Set())
+
+  // Handle approving a JE
   const handleApprove = (jeId: string) => {
+    // Try store first (for generated JEs)
     const success = approveJE(jeId)
     if (success) {
-      // Force re-fetch from store
       setGeneratedJEs(getGeneratedJEs())
+    } else {
+      // For mock JEs, update local state
+      setMockApprovals(prev => new Set([...prev, jeId]))
     }
   }
 
-  // Check if a JE is from the store (can be approved)
-  const isFromStore = (jeId: string) => {
-    return generatedJEs.some(je => je.id === jeId)
+  // Get effective status (check local approvals for mock JEs)
+  const getEffectiveStatus = (je: typeof allJournalEntries[0]) => {
+    if (mockApprovals.has(je.id)) return "Approved"
+    return je.status
   }
 
   return (
@@ -235,14 +242,14 @@ function JournalEntriesContent() {
                   <div className="flex items-center gap-4">
                     <Badge 
                       variant="outline" 
-                      className={je.status === "Approved" 
+                      className={getEffectiveStatus(je) === "Approved" 
                         ? "border-success/50 text-success" 
-                        : je.status === "Draft"
+                        : getEffectiveStatus(je) === "Draft"
                         ? "border-primary/50 text-primary"
                         : "border-warning/50 text-warning"
                       }
                     >
-                      {je.status}
+                      {getEffectiveStatus(je)}
                     </Badge>
                     {je.lastModified && (
                       <Badge variant="outline" className="border-warning/50 text-warning gap-1">
@@ -250,7 +257,7 @@ function JournalEntriesContent() {
                         Regenerated
                       </Badge>
                     )}
-                    {je.status !== "Approved" && (
+                    {getEffectiveStatus(je) !== "Approved" && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -259,8 +266,6 @@ function JournalEntriesContent() {
                           e.stopPropagation()
                           handleApprove(je.id)
                         }}
-                        disabled={!isFromStore(je.id)}
-                        title={!isFromStore(je.id) ? "Only generated JEs can be approved in this demo" : "Approve this journal entry"}
                       >
                         <Check className="size-3" />
                         Approve
