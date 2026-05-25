@@ -45,22 +45,34 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const workspaceNavItems = [
   {
-    title: "Dashboard",
+    title: "Overview",
     url: "/",
     icon: Home,
-    description: "Portfolio overview",
+    description: "Dashboard overview",
   },
   {
-    title: "Positions",
-    url: "/positions",
-    icon: TrendingUp,
-    description: "Borrow & supply positions",
+    title: "Wallets",
+    url: "/activity",
+    icon: Wallet,
+    description: "Indexed wallets & reports",
+  },
+  {
+    title: "Reports",
+    url: "/reports",
+    icon: FileText,
+    description: "Audit report packets",
   },
   {
     title: "Transactions",
     url: "/transactions",
     icon: Receipt,
     description: "Onchain transaction ledger",
+  },
+  {
+    title: "Positions",
+    url: "/positions",
+    icon: TrendingUp,
+    description: "Borrow & supply positions",
   },
 ]
 
@@ -78,10 +90,10 @@ const accountingNavItems = [
     description: "Loan & collateral rollforward",
   },
   {
-    title: "Pricing Data",
+    title: "Fair Value",
     url: "/pricing",
     icon: DollarSign,
-    description: "ASC 820 price sources",
+    description: "ASC 820 historical pricing",
   },
 ]
 
@@ -117,12 +129,15 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
                   size="lg"
                   className="h-12 px-3 data-[state=open]:bg-sidebar-accent/50"
                 >
-                  <div className="flex size-8 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
-                    CLA
+                  <div className="flex size-8 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
+                    <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
+                      <path d="M12 2L4 6v4c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4zm0 2.18l6 3v3.82c0 4.53-3.13 8.77-6 9.82-2.87-1.05-6-5.29-6-9.82V7.18l6-3z"/>
+                      <path d="M9 12l2 2 4-4-1.41-1.41L11 11.17l-.59-.59L9 12z"/>
+                    </svg>
                   </div>
                   <div className="grid flex-1 text-left leading-tight">
-                    <span className="truncate text-sm font-semibold tracking-tight">CLA Finance</span>
-                    <span className="truncate text-xs text-sidebar-foreground/60">Accounting</span>
+                    <span className="truncate text-sm font-semibold tracking-tight">Compound</span>
+                    <span className="truncate text-xs text-sidebar-foreground/60">Loan Accounting</span>
                   </div>
                   <ChevronDown className="size-4 text-sidebar-foreground/40" />
                 </SidebarMenuButton>
@@ -133,12 +148,14 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
                 </DropdownMenuLabel>
                 <DropdownMenuGroup>
                   <DropdownMenuItem className="gap-3 px-3 py-2.5">
-                    <div className="flex size-8 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
-                      CLA
+                    <div className="flex size-8 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
+                      <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
+                        <path d="M12 2L4 6v4c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"/>
+                      </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">CLA Finance</p>
-                      <p className="text-xs text-muted-foreground">Accounting</p>
+                      <p className="text-sm font-medium">Compound Loan Accounting</p>
+                      <p className="text-xs text-muted-foreground">Enterprise DeFi</p>
                     </div>
                     <div className="size-2 rounded-full bg-sidebar-primary/80" />
                   </DropdownMenuItem>
@@ -152,7 +169,7 @@ export function AppSidebar({ userId = "user_123", onUserSwitch }: AppSidebarProp
       <SidebarContent className="px-0 py-4">
         <SidebarGroup className="px-0">
           <SidebarGroupLabel className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            Workspace
+            Main
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5 px-2">

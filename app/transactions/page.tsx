@@ -1,20 +1,45 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AppShell } from "@/components/app-shell"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { 
   Download,
-  Filter,
   Search,
   CheckCircle2,
   ExternalLink,
+  FileText,
+  Loader2,
+  HelpCircle,
+  AlertCircle,
+  BookOpen,
   ArrowRight,
-  Plus,
+  RefreshCw,
+  Info,
 } from "lucide-react"
+import {
+  addGeneratedJE,
+  getJEForTransaction,
+  getNextJENumber,
+  subscribe,
+  type GeneratedJE,
+} from "@/lib/je-store"
 
 interface Transaction {
   id: string
@@ -31,6 +56,8 @@ interface Transaction {
   pricePerUnit: number
   txHash: string
   status: "Mapped" | "Pending" | "Review"
+  jeStatus?: "none" | "generating" | "generated" | "error"
+  jeId?: string
 }
 
 const mockTransactions: Transaction[] = [
@@ -127,8 +154,19 @@ function formatNumber(value: number) {
 function TransactionsContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<string | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions.map(tx => ({ ...tx, jeStatus: "none" as const })))
+  const [bulkGenerating, setBulkGenerating] = useState(false)
+  const [showJEDialog, setShowJEDialog] = useState(false)
+  const [selectedJE, setSelectedJE] = useState<GeneratedJE | null>(null)
+  const [, forceUpdate] = useState(0)
 
-  const filteredTransactions = mockTransactions.filter(tx => {
+  // Subscribe to JE store updates
+  useEffect(() => {
+    const unsubscribe = subscribe(() => forceUpdate(n => n + 1))
+    return unsubscribe
+  }, [])
+
+  const filteredTransactions = transactions.filter(tx => {
     if (filterType && tx.eventType !== filterType) return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
@@ -139,10 +177,97 @@ function TransactionsContent() {
     return true
   })
 
-  const totalTransactions = mockTransactions.length
-  const mappedTransactions = mockTransactions.filter(tx => tx.status === "Mapped").length
-  const chainlinkPriced = mockTransactions.filter(tx => tx.priceSource === "Chainlink").length
-  const internalPriced = mockTransactions.filter(tx => tx.priceSource === "Internal").length
+  const totalTransactions = transactions.length
+  const mappedTransactions = transactions.filter(tx => tx.status === "Mapped").length
+  const chainlinkPriced = transactions.filter(tx => tx.priceSource === "Chainlink").length
+  const internalPriced = transactions.filter(tx => tx.priceSource === "Internal").length
+  const jeGeneratedCount = transactions.filter(tx => tx.jeStatus === "generated").length
+
+  // Get accounting accounts based on event type
+  const getJEAccounts = (tx: Transaction) => {
+    switch (tx.eventType) {
+      case "Supply":
+        return { debit: "1200 - DeFi Collateral", credit: "1100 - Digital Assets" }
+      case "Borrow":
+        return { debit: "1100 - Digital Assets", credit: "2100 - DeFi Loans Payable" }
+      case "Repay":
+        return { debit: "2100 - DeFi Loans Payable", credit: "1100 - Digital Assets" }
+      case "Withdraw":
+        return { debit: "1100 - Digital Assets", credit: "1200 - DeFi Collateral" }
+      case "Liquidation":
+        return { debit: "6500 - Liquidation Loss", credit: "1200 - DeFi Collateral" }
+      default:
+        return { debit: "9999 - Suspense", credit: "9999 - Suspense" }
+    }
+  }
+
+  // Generate or regenerate JE for a single transaction
+  const generateJE = async (txId: string, isRegenerate = false) => {
+    const tx = transactions.find(t => t.id === txId)
+    if (!tx) return
+
+    // Set generating state
+    setTransactions(prev => prev.map(t => 
+      t.id === txId ? { ...t, jeStatus: "generating" as const } : t
+    ))
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1200))
+
+    const accounts = getJEAccounts(tx)
+    const jeNumber = getNextJENumber()
+    const jeId = `${jeNumber}-${txId}`
+    
+    const newJE: GeneratedJE = {
+      id: jeId,
+      txId: tx.id,
+      txHash: tx.txHash,
+      jeNumber,
+      date: tx.date,
+      eventType: tx.eventType,
+      asset: tx.asset,
+      debitAccount: accounts.debit,
+      creditAccount: accounts.credit,
+      amount: tx.fairValue,
+      memo: `${tx.eventType} ${tx.amount} ${tx.asset} on ${tx.date} (Block ${tx.block})`,
+      createdAt: new Date().toISOString(),
+      status: "Draft",
+      source: "auto",
+      ...(isRegenerate && { lastModified: new Date().toISOString(), modifiedReason: "Regenerated" }),
+    }
+
+    // Add to shared store
+    addGeneratedJE(newJE)
+
+    setTransactions(prev => prev.map(t => 
+      t.id === txId ? { ...t, jeStatus: "generated" as const, jeId } : t
+    ))
+
+    return newJE
+  }
+
+  // Generate JEs for all mapped transactions without JEs
+  const generateAllJEs = async () => {
+    const eligibleTxs = transactions.filter(tx => tx.status === "Mapped" && tx.jeStatus === "none")
+    if (eligibleTxs.length === 0) return
+
+    setBulkGenerating(true)
+
+    for (const tx of eligibleTxs) {
+      await generateJE(tx.id)
+    }
+
+    setBulkGenerating(false)
+  }
+
+  // View generated JE details
+  const viewJE = (txId: string) => {
+    const je = getJEForTransaction(txId)
+    if (je) {
+      setSelectedJE(je)
+      setShowJEDialog(true)
+    }
+  }
 
   const eventTypes = ["Supply", "Borrow", "Repay", "Withdraw", "Liquidation"]
 
@@ -158,6 +283,7 @@ function TransactionsContent() {
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
@@ -178,6 +304,34 @@ function TransactionsContent() {
           </Button>
         </div>
       </div>
+
+      {/* JE Generation Summary Banner */}
+      {jeGeneratedCount > 0 && (
+        <Card className="bg-success-muted/50 border-success/30">
+          <CardContent className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-success/20">
+                <BookOpen className="size-4 text-success" />
+              </div>
+              <div>
+                <p className="font-medium text-sm text-success">{jeGeneratedCount} Journal Entries Generated</p>
+                <p className="text-xs text-muted-foreground">
+                  JEs are ready for review in the Journal Entries page
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-success/30 text-success hover:bg-success/10"
+              onClick={() => window.location.href = "/journal-entries"}
+            >
+              <ArrowRight className="size-4" />
+              View Journal Entries
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Import Success Banner */}
       <Card className="bg-muted/30 border-border/60">
@@ -239,10 +393,36 @@ function TransactionsContent() {
                 </Button>
               ))}
             </div>
-            <Button variant="outline" size="sm" className="gap-2 h-9">
-              <ArrowRight className="size-4" />
-              Generate JEs
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="gap-2 h-9"
+                  onClick={generateAllJEs}
+                  disabled={bulkGenerating || transactions.filter(tx => tx.status === "Mapped" && tx.jeStatus === "none").length === 0}
+                >
+                  {bulkGenerating ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="size-4" />
+                      Generate All JEs
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="font-medium">Generate Journal Entries</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Creates double-entry accounting records (debits &amp; credits) for all mapped transactions. 
+                  JEs can then be exported to your GL system.
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -256,7 +436,24 @@ function TransactionsContent() {
                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Amount (Tokens)</th>
                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Fair Value (ASC 820)</th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Tx Hash</th>
-                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Status</th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">
+                  <div className="flex items-center justify-center gap-1">
+                    JE Status
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="size-3 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        <p><strong>Journal Entry (JE)</strong> status shows whether an accounting entry has been created for this transaction.</p>
+                        <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                          <li>• <strong>Pending</strong>: No JE generated yet</li>
+                          <li>• <strong>Generated</strong>: JE created and ready for review</li>
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -300,15 +497,106 @@ function TransactionsContent() {
                     </a>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Badge 
-                      variant="outline" 
-                      className={tx.status === "Mapped" 
-                        ? "border-emerald-500/50 text-emerald-500" 
-                        : "border-amber-500/50 text-amber-500"
-                      }
-                    >
-                      {tx.status}
-                    </Badge>
+                    {tx.jeStatus === "generating" ? (
+                      <Badge variant="outline" className="border-primary/50 text-primary gap-1">
+                        <Loader2 className="size-3 animate-spin" />
+                        Creating...
+                      </Badge>
+                    ) : tx.jeStatus === "generated" ? (
+                      <Badge 
+                        variant="outline" 
+                        className="border-success/50 text-success gap-1 cursor-pointer hover:bg-success/10"
+                        onClick={() => viewJE(tx.id)}
+                      >
+                        <CheckCircle2 className="size-3" />
+                        Generated
+                      </Badge>
+                    ) : tx.jeStatus === "error" ? (
+                      <Badge variant="outline" className="border-destructive/50 text-destructive gap-1">
+                        <AlertCircle className="size-3" />
+                        Error
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">
+                        Pending
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {tx.jeStatus === "generated" ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1 text-primary"
+                              onClick={() => viewJE(tx.id)}
+                            >
+                              <BookOpen className="size-3" />
+                              View
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View the generated journal entry</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => generateJE(tx.id, true)}
+                            >
+                              <RefreshCw className="size-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs text-xs">
+                            <p className="font-medium">Regenerate Journal Entry</p>
+                            <p className="text-muted-foreground mt-1">
+                              Regenerate only if:
+                            </p>
+                            <ul className="text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                              <li>Wallet data was reindexed</li>
+                              <li>Fair value pricing was updated</li>
+                              <li>Manual edits need to be reset</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    ) : tx.jeStatus === "generating" ? (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" disabled>
+                        <Loader2 className="size-3 animate-spin" />
+                      </Button>
+                    ) : tx.status === "Mapped" ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-xs gap-1"
+                            onClick={() => generateJE(tx.id)}
+                          >
+                            <FileText className="size-3" />
+                            Generate JE
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-xs text-xs">
+                          <p className="font-medium">Generate Journal Entry</p>
+                          <p className="text-muted-foreground mt-1">
+                            Creates a double-entry accounting record (debit &amp; credit) for this {tx.eventType.toLowerCase()} transaction.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" disabled>
+                            <AlertCircle className="size-3 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Transaction must be mapped before generating JE</TooltipContent>
+                      </Tooltip>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -321,10 +609,88 @@ function TransactionsContent() {
       <div className="flex items-center justify-center gap-6 py-4 text-xs text-muted-foreground border-t border-border/50">
         <span>{totalTransactions} transactions</span>
         <span>{mappedTransactions} mapped</span>
-        <span>{totalTransactions - mappedTransactions} pending review</span>
+        <span>{jeGeneratedCount} JEs generated</span>
         <span>ASC 820 pricing: {chainlinkPriced} Chainlink · {internalPriced} Internal</span>
       </div>
+
+      {/* JE Detail Dialog */}
+      <Dialog open={showJEDialog} onOpenChange={setShowJEDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="size-5 text-primary" />
+              Journal Entry Details
+            </DialogTitle>
+            <DialogDescription>
+              Double-entry accounting record generated from the onchain transaction
+            </DialogDescription>
+          </DialogHeader>
+          {selectedJE && (
+            <div className="space-y-4 mt-2">
+              <div className="rounded-lg border border-border/60 overflow-hidden">
+                <div className="bg-muted/30 px-4 py-2 border-b border-border/40 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">JE Reference</p>
+                    <p className="font-mono text-sm font-semibold">{selectedJE.jeNumber}</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedJE.eventType} - {selectedJE.asset}
+                  </Badge>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-dashed border-border/40">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Debit</p>
+                      <p className="text-sm font-medium">{selectedJE.debitAccount}</p>
+                    </div>
+                    <p className="font-mono font-semibold text-foreground">
+                      {formatUsd(selectedJE.amount)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Credit</p>
+                      <p className="text-sm font-medium">{selectedJE.creditAccount}</p>
+                    </div>
+                    <p className="font-mono font-semibold text-foreground">
+                      {formatUsd(selectedJE.amount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">Memo / Description</p>
+                <p className="text-sm">{selectedJE.memo}</p>
+              </div>
+              {selectedJE.lastModified && (
+                <div className="bg-warning-muted/50 border border-warning/30 rounded-lg p-3 flex items-start gap-2">
+                  <Info className="size-4 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-warning">Regenerated Entry</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      This JE was regenerated on {new Date(selectedJE.lastModified).toLocaleString()}.
+                      {selectedJE.modifiedReason && ` Reason: ${selectedJE.modifiedReason}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/40">
+                <span>Created: {new Date(selectedJE.createdAt).toLocaleString()}</span>
+                <Badge variant="outline" className={
+                  selectedJE.status === "Approved" 
+                    ? "border-success/50 text-success gap-1"
+                    : "border-primary/50 text-primary gap-1"
+                }>
+                  <CheckCircle2 className="size-3" />
+                  {selectedJE.status === "Approved" ? "Approved" : "Draft - Ready for Review"}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+    </TooltipProvider>
   )
 }
 

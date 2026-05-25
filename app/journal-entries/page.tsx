@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +14,11 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  RefreshCw,
+  Info,
+  Check,
 } from "lucide-react"
+import { getGeneratedJEs, subscribe, approveJE, type GeneratedJE } from "@/lib/je-store"
 
 interface JournalEntryLine {
   account: string
@@ -33,6 +37,8 @@ interface JournalEntry {
   status: "Approved" | "Draft" | "Pending"
   preparedBy: string
   lines: JournalEntryLine[]
+  lastModified?: string
+  modifiedReason?: string
 }
 
 interface WorkingPaper {
@@ -100,9 +106,54 @@ function formatUsd(value: number) {
 
 function JournalEntriesContent() {
   const [expandedJE, setExpandedJE] = useState<string | null>("je_1")
+  const [generatedJEs, setGeneratedJEs] = useState<GeneratedJE[]>([])
 
-  const approvedCount = mockJournalEntries.filter(je => je.status === "Approved").length
-  const draftCount = mockJournalEntries.filter(je => je.status === "Draft").length
+  // Subscribe to JE store updates
+  useEffect(() => {
+    setGeneratedJEs(getGeneratedJEs())
+    const unsubscribe = subscribe(() => {
+      setGeneratedJEs(getGeneratedJEs())
+    })
+    return unsubscribe
+  }, [])
+
+  // Convert generated JEs to the display format
+  const dynamicJEs: JournalEntry[] = generatedJEs.map(je => ({
+    id: je.id,
+    jeNumber: je.jeNumber,
+    date: je.date,
+    description: `${je.eventType} — ${je.asset}`,
+    txHash: je.txHash,
+    status: je.status,
+    preparedBy: je.source === "auto" ? "System (Auto-generated)" : "Manual",
+    lines: [
+      { account: je.debitAccount, description: `${je.eventType} - ${je.asset}`, debit: je.amount, credit: 0 },
+      { account: je.creditAccount, description: `${je.eventType} - ${je.asset}`, debit: 0, credit: je.amount },
+    ],
+    lastModified: je.lastModified,
+    modifiedReason: je.modifiedReason,
+  }))
+
+  // Combine mock JEs with dynamically generated ones
+  const allJournalEntries = [...mockJournalEntries, ...dynamicJEs]
+
+  const approvedCount = allJournalEntries.filter(je => je.status === "Approved").length
+  const draftCount = allJournalEntries.filter(je => je.status === "Draft").length
+  const pendingCount = allJournalEntries.filter(je => je.status === "Pending").length
+
+  // Handle approving a JE (only works for generated JEs from the store)
+  const handleApprove = (jeId: string) => {
+    const success = approveJE(jeId)
+    if (success) {
+      // Force re-fetch from store
+      setGeneratedJEs(getGeneratedJEs())
+    }
+  }
+
+  // Check if a JE is from the store (can be approved)
+  const isFromStore = (jeId: string) => {
+    return generatedJEs.some(je => je.id === jeId)
+  }
 
   return (
     <div className="space-y-6">
@@ -124,9 +175,37 @@ function JournalEntriesContent() {
         </div>
       </div>
 
+      {/* Summary Stats */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card className="bg-card border-border/60">
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Total JEs</p>
+            <p className="text-2xl font-bold font-mono mt-1">{allJournalEntries.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border/60">
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Approved</p>
+            <p className="text-2xl font-bold font-mono mt-1 text-success">{approvedCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border/60">
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Draft</p>
+            <p className="text-2xl font-bold font-mono mt-1 text-primary">{draftCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border/60">
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">From Transactions</p>
+            <p className="text-2xl font-bold font-mono mt-1">{generatedJEs.length}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Journal Entry Cards */}
       <div className="space-y-4">
-        {mockJournalEntries.map((je) => {
+        {allJournalEntries.map((je) => {
           const isExpanded = expandedJE === je.id
           const totalDebit = je.lines.reduce((sum, l) => sum + l.debit, 0)
           const totalCredit = je.lines.reduce((sum, l) => sum + l.credit, 0)
@@ -157,12 +236,36 @@ function JournalEntriesContent() {
                     <Badge 
                       variant="outline" 
                       className={je.status === "Approved" 
-                        ? "border-emerald-500/50 text-emerald-500" 
-                        : "border-amber-500/50 text-amber-500"
+                        ? "border-success/50 text-success" 
+                        : je.status === "Draft"
+                        ? "border-primary/50 text-primary"
+                        : "border-warning/50 text-warning"
                       }
                     >
                       {je.status}
                     </Badge>
+                    {je.lastModified && (
+                      <Badge variant="outline" className="border-warning/50 text-warning gap-1">
+                        <RefreshCw className="size-3" />
+                        Regenerated
+                      </Badge>
+                    )}
+                    {je.status !== "Approved" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5 border-success/40 text-success hover:bg-success/10 hover:border-success/60"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleApprove(je.id)
+                        }}
+                        disabled={!isFromStore(je.id)}
+                        title={!isFromStore(je.id) ? "Only generated JEs can be approved in this demo" : "Approve this journal entry"}
+                      >
+                        <Check className="size-3" />
+                        Approve
+                      </Button>
+                    )}
                     <span className="text-xs text-muted-foreground">Prepared by: {je.preparedBy}</span>
                   </div>
                 </div>

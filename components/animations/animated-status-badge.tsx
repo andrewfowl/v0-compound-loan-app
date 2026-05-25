@@ -1,6 +1,6 @@
 "use client"
 
-import { LottieIcon } from "./lottie-icon"
+import { LottieIcon, type LottieIconProps } from "./lottie-icon"
 import type { RiskLevel } from "@/lib/compound/types"
 
 export interface AnimatedStatusBadgeProps {
@@ -10,7 +10,7 @@ export interface AnimatedStatusBadgeProps {
   showIcon?: boolean
 }
 
-const STATUS_CONFIG: Record<string, { type: "low" | "monitor" | "at-risk" | "critical" | "success" | "loading" | "info"; color: string; bgColor: string }> = {
+const STATUS_CONFIG: Record<string, { type: LottieIconProps["type"]; color: string; bgColor: string }> = {
   low: { type: "safe", color: "text-success", bgColor: "bg-success-muted" },
   monitor: { type: "monitor", color: "text-warning", bgColor: "bg-warning-muted" },
   "at-risk": { type: "at-risk", color: "text-warning", bgColor: "bg-warning-muted" },
@@ -29,7 +29,7 @@ export function AnimatedStatusBadge({ status, label, size = "md", showIcon = tru
 
   return (
     <div className={`inline-flex items-center gap-2 rounded-full font-medium ${sizeClass} ${config.bgColor} ${config.color}`}>
-      {showIcon && <LottieIcon type={config.type} size={iconSize} loop autoplay speed={1} />}
+      {showIcon && <LottieIcon type={config.type} size={iconSize} loop autoplay />}
       <span>{label || status.toUpperCase()}</span>
     </div>
   )

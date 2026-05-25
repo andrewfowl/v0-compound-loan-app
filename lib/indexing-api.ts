@@ -59,6 +59,10 @@ async function backendFetch(path: string, options: BackendFetchOptions = {}) {
   return payload;
 }
 
+export async function listIndexingJobs() {
+  return backendFetch("/api/wallet-jobs", { method: "GET" });
+}
+
 export async function createIndexingJob(input: {
   walletAddress: string;
   walletStartDate: string;
