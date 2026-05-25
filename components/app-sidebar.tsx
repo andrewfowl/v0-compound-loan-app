@@ -16,10 +16,6 @@ import {
   Table2,
   DollarSign,
   Wallet,
-  Activity,
-  Link2,
-  ScrollText,
-  FileSpreadsheet,
 } from "lucide-react"
 
 import {
@@ -58,7 +54,7 @@ const workspaceNavItems = [
     title: "Wallets",
     url: "/activity",
     icon: Wallet,
-    description: "Manage wallet addresses",
+    description: "Indexed wallets & reports",
   },
   {
     title: "Reports",
@@ -77,12 +73,6 @@ const workspaceNavItems = [
     url: "/positions",
     icon: TrendingUp,
     description: "Borrow & supply positions",
-  },
-  {
-    title: "Reconciliation",
-    url: "/activity",
-    icon: Activity,
-    description: "Activity reconciliation",
   },
 ]
 
