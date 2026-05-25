@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,12 +34,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { AppShell } from "@/components/app-shell"
 import {
   HelpCircle,
-  RefreshCw,
   Plus,
   Pencil,
   Check,
@@ -50,9 +48,11 @@ import {
   CalendarDays,
   Info,
   AlertTriangle,
-  ChevronDown,
-  ChevronRight,
-  FileText,
+  FileSpreadsheet,
+  Calculator,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
 } from "lucide-react"
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -104,6 +104,27 @@ interface PriceSnapshot {
   date: string          // YYYY-MM-DD, always a month-end
   entries: PriceEntry[]
   locked: boolean       // once JEs are generated, lock the snapshot
+}
+
+/** Daily price data for an asset on a specific date */
+interface DailyPriceData {
+  date: string       // YYYY-MM-DD
+  asset: string      // symbol
+  price: number
+  source: string
+}
+
+/** Computed pricing metrics for an asset for a month */
+interface ComputedPriceMetrics {
+  asset: string
+  periodEndPrice: number       // Last day of month price (for balance measurement)
+  periodStartPrice: number     // First day of month price
+  averagePrice: number         // Average over the month (for activity measurement)
+  priceChange: number          // End - Start
+  priceChangePercent: number   // (End - Start) / Start * 100
+  unrealizedGain: number       // Placeholder - would need holdings data
+  dataPoints: number           // Number of daily prices in the month
+  missingDates: number         // Number of dates with fallback pricing
 }
 
 // ─── Seed Data ────────────────────────────────────────────────────────────────
@@ -188,6 +209,157 @@ function parseCsv(text: string): Partial<PriceEntry>[] {
   }).filter((e) => e.symbol && !isNaN(e.price!))
 }
 
+/**
+ * Parse daily pricing CSV with format: date,symbol,price,source
+ * Supports flexible column names and handles various date formats
+ */
+function parseDailyPriceCsv(text: string): DailyPriceData[] {
+  const lines = text.trim().split("\n")
+  if (lines.length < 2) return []
+  
+  const header = lines[0].toLowerCase().split(",").map((h) => h.trim().replace(/"/g, ""))
+  const dateIdx = header.findIndex(h => h === "date" || h === "timestamp" || h === "time")
+  const symbolIdx = header.findIndex(h => h === "symbol" || h === "asset" || h === "token")
+  const priceIdx = header.findIndex(h => h === "price" || h === "price_usd" || h === "close" || h === "value")
+  const sourceIdx = header.findIndex(h => h === "source" || h === "provider")
+  
+  if (dateIdx < 0 || symbolIdx < 0 || priceIdx < 0) return []
+  
+  const results: DailyPriceData[] = []
+  
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""))
+    const dateStr = cols[dateIdx]
+    const symbol = (cols[symbolIdx] || "").toUpperCase()
+    const price = parseFloat(cols[priceIdx])
+    const source = sourceIdx >= 0 ? cols[sourceIdx] : "CSV Import"
+    
+    if (!dateStr || !symbol || isNaN(price)) continue
+    
+    // Parse date - support YYYY-MM-DD, MM/DD/YYYY, etc.
+    let parsedDate: string
+    if (dateStr.includes("-")) {
+      parsedDate = dateStr.split("T")[0] // Handle ISO format
+    } else if (dateStr.includes("/")) {
+      const parts = dateStr.split("/")
+      if (parts[2].length === 4) {
+        // MM/DD/YYYY
+        parsedDate = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`
+      } else {
+        // YYYY/MM/DD
+        parsedDate = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`
+      }
+    } else {
+      continue // Skip invalid date format
+    }
+    
+    results.push({ date: parsedDate, asset: symbol, price, source })
+  }
+  
+  return results.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+/**
+ * Get price for a specific date using "last available prior date" fallback rule
+ * If exact date not found, use the most recent price before that date
+ */
+function getPriceForDate(
+  dailyPrices: DailyPriceData[],
+  asset: string,
+  targetDate: string
+): { price: number; actualDate: string; isFallback: boolean } | null {
+  const assetPrices = dailyPrices
+    .filter(p => p.asset === asset)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  
+  if (assetPrices.length === 0) return null
+  
+  // Find exact match first
+  const exact = assetPrices.find(p => p.date === targetDate)
+  if (exact) {
+    return { price: exact.price, actualDate: exact.date, isFallback: false }
+  }
+  
+  // Find last available price before target date
+  const priorPrices = assetPrices.filter(p => p.date < targetDate)
+  if (priorPrices.length > 0) {
+    const lastPrior = priorPrices[priorPrices.length - 1]
+    return { price: lastPrior.price, actualDate: lastPrior.date, isFallback: true }
+  }
+  
+  // If no prior price, use first available (for beginning of data set)
+  return { price: assetPrices[0].price, actualDate: assetPrices[0].date, isFallback: true }
+}
+
+/**
+ * Compute pricing metrics for a month from daily price data
+ */
+function computeMonthlyMetrics(
+  dailyPrices: DailyPriceData[],
+  year: number,
+  month: number // 1-12
+): ComputedPriceMetrics[] {
+  // Get all unique assets
+  const assets = [...new Set(dailyPrices.map(p => p.asset))]
+  
+  // Calculate date range for the month
+  const firstDay = `${year}-${String(month).padStart(2, "0")}-01`
+  const lastDay = new Date(year, month, 0).toISOString().split("T")[0]
+  
+  // Generate all dates in the month
+  const allDates: string[] = []
+  const current = new Date(firstDay)
+  const end = new Date(lastDay)
+  while (current <= end) {
+    allDates.push(current.toISOString().split("T")[0])
+    current.setDate(current.getDate() + 1)
+  }
+  
+  return assets.map(asset => {
+    const assetPrices = dailyPrices.filter(p => p.asset === asset)
+    const pricesInMonth = assetPrices.filter(p => p.date >= firstDay && p.date <= lastDay)
+    
+    // Get period-end price (with fallback)
+    const endPriceData = getPriceForDate(dailyPrices, asset, lastDay)
+    const periodEndPrice = endPriceData?.price ?? 0
+    
+    // Get period-start price (with fallback)
+    const startPriceData = getPriceForDate(dailyPrices, asset, firstDay)
+    const periodStartPrice = startPriceData?.price ?? 0
+    
+    // Calculate average price over the month
+    // For each day, get the price (with fallback) and average them
+    let totalPrice = 0
+    let fallbackCount = 0
+    
+    for (const date of allDates) {
+      const priceData = getPriceForDate(dailyPrices, asset, date)
+      if (priceData) {
+        totalPrice += priceData.price
+        if (priceData.isFallback) fallbackCount++
+      }
+    }
+    
+    const averagePrice = allDates.length > 0 ? totalPrice / allDates.length : 0
+    const priceChange = periodEndPrice - periodStartPrice
+    const priceChangePercent = periodStartPrice > 0 
+      ? (priceChange / periodStartPrice) * 100 
+      : 0
+    
+    return {
+      asset,
+      periodEndPrice,
+      periodStartPrice,
+      averagePrice,
+      priceChange,
+      priceChangePercent,
+      unrealizedGain: 0, // Would need holdings data to calculate
+      dataPoints: pricesInMonth.length,
+      missingDates: fallbackCount,
+    }
+  })
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function FairValuePage() {
@@ -203,9 +375,23 @@ export default function FairValuePage() {
   const [showImport, setShowImport] = useState(false)
   const [csvPreview, setCsvPreview] = useState<Partial<PriceEntry>[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+  const dailyFileRef = useRef<HTMLInputElement>(null)
+
+  // Daily pricing state
+  const [dailyPrices, setDailyPrices] = useState<DailyPriceData[]>([])
+  const [showDailyImport, setShowDailyImport] = useState(false)
+  const [dailyPreview, setDailyPreview] = useState<DailyPriceData[]>([])
+  const [activeTab, setActiveTab] = useState<"month-end" | "daily-prices" | "computed">("month-end")
 
   const snapshot = snapshots[activeDateIdx]
   const entries = snapshot?.entries ?? []
+
+  // Compute metrics when daily prices exist for the selected period
+  const computedMetrics = useMemo(() => {
+    if (!snapshot || dailyPrices.length === 0) return []
+    const [year, month] = snapshot.date.split("-").map(Number)
+    return computeMonthlyMetrics(dailyPrices, year, month)
+  }, [snapshot, dailyPrices])
 
   // ── Edit helpers ────────────────────────────────────────────────────────────
 
@@ -343,6 +529,90 @@ export default function FairValuePage() {
     setCsvPreview([])
   }
 
+  // ── Daily Price CSV import ───────────────────────────────────────────────────
+
+  function handleDailyFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const parsed = parseDailyPriceCsv(text)
+      if (!parsed.length) {
+        setCsvError("No valid rows found. Ensure columns: date, symbol, price (or price_usd/close).")
+        return
+      }
+      setDailyPreview(parsed)
+      setCsvError(null)
+      setShowDailyImport(true)
+    }
+    reader.readAsText(file)
+    e.target.value = ""
+  }
+
+  function confirmDailyImport() {
+    // Merge with existing daily prices (update if same date+asset, add if new)
+    setDailyPrices((prev) => {
+      const merged = [...prev]
+      dailyPreview.forEach((row) => {
+        const idx = merged.findIndex(p => p.date === row.date && p.asset === row.asset)
+        if (idx >= 0) {
+          merged[idx] = row
+        } else {
+          merged.push(row)
+        }
+      })
+      return merged.sort((a, b) => a.date.localeCompare(b.date) || a.asset.localeCompare(b.asset))
+    })
+    
+    // Also update the month-end snapshot with period-end prices
+    if (snapshot) {
+      const [year, month] = snapshot.date.split("-").map(Number)
+      const metrics = computeMonthlyMetrics([...dailyPrices, ...dailyPreview], year, month)
+      
+      setSnapshots((prev) =>
+        prev.map((snap, i) => {
+          if (i !== activeDateIdx) return snap
+          const updated = snap.entries.map(entry => {
+            const metric = metrics.find(m => m.asset === entry.symbol)
+            if (metric && metric.periodEndPrice > 0) {
+              return { ...entry, price: metric.periodEndPrice, custom: true, notes: entry.notes || "Updated from daily CSV" }
+            }
+            return entry
+          })
+          // Add any new assets from the CSV
+          metrics.forEach(metric => {
+            if (!updated.find(e => e.symbol === metric.asset) && metric.periodEndPrice > 0) {
+              updated.push({
+                asset: metric.asset,
+                symbol: metric.asset,
+                price: metric.periodEndPrice,
+                onChainPrice: metric.periodEndPrice,
+                source: "CSV Import",
+                level: "2",
+                notes: "Added from daily price CSV",
+                custom: true,
+              })
+            }
+          })
+          return { ...snap, entries: updated }
+        })
+      )
+    }
+    
+    setShowDailyImport(false)
+    setDailyPreview([])
+  }
+
+  // Get daily prices for current month
+  const monthlyDailyPrices = useMemo(() => {
+    if (!snapshot) return []
+    const [year, month] = snapshot.date.split("-").map(Number)
+    const firstDay = `${year}-${String(month).padStart(2, "0")}-01`
+    const lastDay = snapshot.date
+    return dailyPrices.filter(p => p.date >= firstDay && p.date <= lastDay)
+  }, [snapshot, dailyPrices])
+
   // ── Derived values ───────────────────────────────────────────────────────────
 
   const levelCounts = { "1": 0, "2": 0, "3": 0 }
@@ -421,6 +691,21 @@ export default function FairValuePage() {
                 )
               })}
             </div>
+
+            {/* Daily prices summary */}
+            {dailyPrices.length > 0 && (
+              <div className="border-t border-border/50 px-3 py-3 space-y-1">
+                <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Daily Prices
+                </Label>
+                <div className="text-xs text-muted-foreground">
+                  {dailyPrices.length} data points
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {[...new Set(dailyPrices.map(p => p.asset))].length} assets
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Main content */}
@@ -459,6 +744,34 @@ export default function FairValuePage() {
                       className="hidden"
                       onChange={handleFileChange}
                     />
+                    <input
+                      ref={dailyFileRef}
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={handleDailyFileChange}
+                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs"
+                          disabled={snapshot.locked}
+                          onClick={() => dailyFileRef.current?.click()}
+                        >
+                          <FileSpreadsheet className="size-3.5" />
+                          Upload Monthly Prices
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs text-xs">
+                        <p className="font-medium">Upload Daily Pricing CSV</p>
+                        <p className="text-muted-foreground mt-1">
+                          Upload a CSV with daily prices for the entire month. Required columns: date, symbol, price.
+                          System will auto-calculate period-end, average, and differential prices.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                     <Button
                       variant="outline"
                       size="sm"
@@ -467,7 +780,7 @@ export default function FairValuePage() {
                       onClick={() => fileRef.current?.click()}
                     >
                       <Upload className="size-3.5" />
-                      Import CSV
+                      Import Month-End
                     </Button>
                     <Button
                       variant="outline"
@@ -780,6 +1093,204 @@ export default function FairValuePage() {
                   })}
                 </div>
 
+                {/* Computed Metrics Section */}
+                {(computedMetrics.length > 0 || monthlyDailyPrices.length > 0) && (
+                  <Card className="bg-card border-border/60">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Calculator className="size-4 text-primary" />
+                            Computed Price Metrics
+                          </CardTitle>
+                          <CardDescription className="text-xs mt-1">
+                            Period-end, average, and differential prices calculated from daily data.
+                            {monthlyDailyPrices.length > 0 && (
+                              <span className="ml-1">
+                                ({monthlyDailyPrices.length} daily data points loaded)
+                              </span>
+                            )}
+                          </CardDescription>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="size-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm text-xs">
+                            <p className="font-semibold mb-1">Calculation Rules:</p>
+                            <ul className="space-y-1 list-disc pl-4">
+                              <li><strong>Period-End Price:</strong> Last day of month (for balance measurement)</li>
+                              <li><strong>Average Price:</strong> Simple average over all days (for activity measurement)</li>
+                              <li><strong>Differential:</strong> End price minus start price (for gain/loss)</li>
+                              <li><strong>Fallback Rule:</strong> If a required date is missing, uses last available prior date</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {computedMetrics.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/10 border-b border-border/50 hover:bg-muted/10">
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider pl-4">Asset</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Period Start</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Period End</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Average</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help border-b border-dotted border-muted-foreground">Differential</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="text-xs">
+                                    End - Start price (for realized/unrealized gain calculations)
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Change %</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-center">Data Pts</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help border-b border-dotted border-muted-foreground">Fallback</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="text-xs max-w-xs">
+                                    Days using &quot;last available prior date&quot; rule due to missing price data
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {computedMetrics.map((metric) => (
+                              <TableRow key={metric.asset} className="border-b border-border/30 hover:bg-muted/20">
+                                <TableCell className="pl-4 py-3">
+                                  <span className="font-mono font-semibold text-sm">{metric.asset}</span>
+                                </TableCell>
+                                <TableCell className="text-right text-xs font-mono text-muted-foreground">
+                                  {formatUsd(metric.periodStartPrice, metric.periodStartPrice < 10 ? 4 : 2)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-semibold text-sm">
+                                  {formatUsd(metric.periodEndPrice, metric.periodEndPrice < 10 ? 4 : 2)}
+                                </TableCell>
+                                <TableCell className="text-right text-xs font-mono">
+                                  {formatUsd(metric.averagePrice, metric.averagePrice < 10 ? 4 : 2)}
+                                </TableCell>
+                                <TableCell className="text-right py-3">
+                                  <span className={`font-mono text-xs ${
+                                    Math.abs(metric.priceChange) < 0.001 
+                                      ? "text-muted-foreground" 
+                                      : metric.priceChange > 0 
+                                        ? "text-success" 
+                                        : "text-destructive"
+                                  }`}>
+                                    {metric.priceChange >= 0 ? "+" : ""}
+                                    {formatUsd(metric.priceChange, Math.abs(metric.priceChange) < 1 ? 4 : 2)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right py-3">
+                                  <div className="flex items-center justify-end gap-1">
+                                    {metric.priceChangePercent > 0 ? (
+                                      <TrendingUp className="size-3 text-success" />
+                                    ) : metric.priceChangePercent < 0 ? (
+                                      <TrendingDown className="size-3 text-destructive" />
+                                    ) : null}
+                                    <span className={`font-mono text-xs ${
+                                      Math.abs(metric.priceChangePercent) < 0.01
+                                        ? "text-muted-foreground"
+                                        : metric.priceChangePercent > 0
+                                          ? "text-success"
+                                          : "text-destructive"
+                                    }`}>
+                                      {metric.priceChangePercent >= 0 ? "+" : ""}
+                                      {metric.priceChangePercent.toFixed(2)}%
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center text-xs text-muted-foreground">
+                                  {metric.dataPoints}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {metric.missingDates > 0 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge variant="outline" className="text-[10px] border-warning/40 text-warning bg-warning/5 cursor-help">
+                                          {metric.missingDates}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="text-xs">
+                                        {metric.missingDates} days used fallback pricing
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <FileSpreadsheet className="size-8 text-muted-foreground/30 mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Upload a monthly pricing CSV to compute metrics
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Expected format: date, symbol, price (or price_usd/close)
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Daily Prices Detail (collapsible) */}
+                {monthlyDailyPrices.length > 0 && (
+                  <Card className="bg-card border-border/60">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Calendar className="size-4 text-muted-foreground" />
+                        Daily Price Schedule
+                        <Badge variant="secondary" className="text-[10px] ml-2">
+                          {monthlyDailyPrices.length} entries
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Raw daily pricing data for {fmtDate(snapshot.date.slice(0, 7) + "-01")} — {fmtDate(snapshot.date)}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="max-h-64 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/10 border-b border-border/50 hover:bg-muted/10 sticky top-0">
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider pl-4">Date</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider">Asset</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Price</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase tracking-wider">Source</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {monthlyDailyPrices.map((dp, i) => (
+                              <TableRow key={`${dp.date}-${dp.asset}-${i}`} className="border-b border-border/30 hover:bg-muted/20">
+                                <TableCell className="pl-4 py-2 text-xs">{fmtDate(dp.date)}</TableCell>
+                                <TableCell className="py-2">
+                                  <span className="font-mono font-semibold text-xs">{dp.asset}</span>
+                                </TableCell>
+                                <TableCell className="text-right py-2 font-mono text-xs">
+                                  {formatUsd(dp.price, dp.price < 10 ? 4 : 2)}
+                                </TableCell>
+                                <TableCell className="py-2 text-xs text-muted-foreground">{dp.source}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
               </div>
             )}
           </div>
@@ -866,6 +1377,97 @@ export default function FairValuePage() {
               </Button>
               <Button size="sm" onClick={confirmImport}>
                 Import {csvPreview.length} rows
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Daily Price CSV Import Preview Dialog */}
+        <Dialog open={showDailyImport} onOpenChange={setShowDailyImport}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="size-5 text-primary" />
+                Import Monthly Pricing Data
+              </DialogTitle>
+              <DialogDescription>
+                {dailyPreview.length} daily price entries parsed. This will update period-end prices and enable computed metrics (average, differential).
+              </DialogDescription>
+            </DialogHeader>
+            
+            {/* Summary stats */}
+            <div className="grid grid-cols-3 gap-3 py-2">
+              <div className="bg-muted/30 rounded-lg px-3 py-2">
+                <div className="text-xs text-muted-foreground">Total Entries</div>
+                <div className="font-mono font-semibold">{dailyPreview.length}</div>
+              </div>
+              <div className="bg-muted/30 rounded-lg px-3 py-2">
+                <div className="text-xs text-muted-foreground">Unique Assets</div>
+                <div className="font-mono font-semibold">
+                  {[...new Set(dailyPreview.map(p => p.asset))].length}
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg px-3 py-2">
+                <div className="text-xs text-muted-foreground">Date Range</div>
+                <div className="font-mono text-xs font-semibold">
+                  {dailyPreview.length > 0 
+                    ? `${dailyPreview[0].date} — ${dailyPreview[dailyPreview.length - 1].date}`
+                    : "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* Info callout */}
+            <div className="flex items-start gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-4 py-3">
+              <Info className="size-4 shrink-0 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground">What this import does:</p>
+                <ul className="mt-1 space-y-0.5 list-disc pl-4">
+                  <li>Stores daily prices for computing metrics (average, differential)</li>
+                  <li>Auto-updates month-end prices using the last day of data</li>
+                  <li>Applies &quot;last available prior date&quot; fallback for any missing dates</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="max-h-48 overflow-y-auto rounded-md border border-border/50 text-xs">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20 sticky top-0">
+                    <TableHead className="text-xs font-semibold px-3 py-2">Date</TableHead>
+                    <TableHead className="text-xs font-semibold px-3 py-2">Asset</TableHead>
+                    <TableHead className="text-xs font-semibold text-right px-3 py-2">Price (USD)</TableHead>
+                    <TableHead className="text-xs font-semibold px-3 py-2">Source</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dailyPreview.slice(0, 100).map((row, i) => (
+                    <TableRow key={i} className="border-b border-border/30">
+                      <TableCell className="px-3 py-2 text-muted-foreground">{row.date}</TableCell>
+                      <TableCell className="font-mono font-semibold px-3 py-2">{row.asset}</TableCell>
+                      <TableCell className="text-right font-mono px-3 py-2">
+                        {formatUsd(row.price, row.price < 10 ? 4 : 2)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-muted-foreground">{row.source}</TableCell>
+                    </TableRow>
+                  ))}
+                  {dailyPreview.length > 100 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-2">
+                        ...and {dailyPreview.length - 100} more entries
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {csvError && <p className="text-xs text-destructive mt-1">{csvError}</p>}
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => { setShowDailyImport(false); setDailyPreview([]) }}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={confirmDailyImport}>
+                Import {dailyPreview.length} price entries
               </Button>
             </DialogFooter>
           </DialogContent>
