@@ -16,8 +16,9 @@ import {
   ExternalLink,
   RefreshCw,
   Info,
+  Check,
 } from "lucide-react"
-import { getGeneratedJEs, subscribe, type GeneratedJE } from "@/lib/je-store"
+import { getGeneratedJEs, subscribe, approveJE, type GeneratedJE } from "@/lib/je-store"
 
 interface JournalEntryLine {
   account: string
@@ -140,6 +141,20 @@ function JournalEntriesContent() {
   const draftCount = allJournalEntries.filter(je => je.status === "Draft").length
   const pendingCount = allJournalEntries.filter(je => je.status === "Pending").length
 
+  // Handle approving a JE (only works for generated JEs from the store)
+  const handleApprove = (jeId: string) => {
+    const success = approveJE(jeId)
+    if (success) {
+      // Force re-fetch from store
+      setGeneratedJEs(getGeneratedJEs())
+    }
+  }
+
+  // Check if a JE is from the store (can be approved)
+  const isFromStore = (jeId: string) => {
+    return generatedJEs.some(je => je.id === jeId)
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -234,6 +249,22 @@ function JournalEntriesContent() {
                         <RefreshCw className="size-3" />
                         Regenerated
                       </Badge>
+                    )}
+                    {je.status !== "Approved" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5 border-success/40 text-success hover:bg-success/10 hover:border-success/60"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleApprove(je.id)
+                        }}
+                        disabled={!isFromStore(je.id)}
+                        title={!isFromStore(je.id) ? "Only generated JEs can be approved in this demo" : "Approve this journal entry"}
+                      >
+                        <Check className="size-3" />
+                        Approve
+                      </Button>
                     )}
                     <span className="text-xs text-muted-foreground">Prepared by: {je.preparedBy}</span>
                   </div>

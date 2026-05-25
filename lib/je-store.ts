@@ -48,6 +48,25 @@ export function getJEForTransaction(txId: string): GeneratedJE | undefined {
   return generatedJEs.find(j => j.txId === txId)
 }
 
+export function getJEById(jeId: string): GeneratedJE | undefined {
+  return generatedJEs.find(j => j.id === jeId)
+}
+
+export function approveJE(jeId: string): boolean {
+  const index = generatedJEs.findIndex(j => j.id === jeId)
+  if (index >= 0 && generatedJEs[index].status !== "Approved") {
+    generatedJEs[index] = {
+      ...generatedJEs[index],
+      status: "Approved",
+      lastModified: new Date().toISOString(),
+      modifiedReason: "Approved by reviewer",
+    }
+    notifyListeners()
+    return true
+  }
+  return false
+}
+
 export function hasJEForTransaction(txId: string): boolean {
   return generatedJEs.some(j => j.txId === txId)
 }
