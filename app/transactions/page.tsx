@@ -304,7 +304,12 @@ function TransactionsContent() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-2 border-success/30 text-success hover:bg-success/10">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-success/30 text-success hover:bg-success/10"
+              onClick={() => window.location.href = "/journal-entries"}
+            >
               <ArrowRight className="size-4" />
               View Journal Entries
             </Button>
