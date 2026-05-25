@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,7 +30,16 @@ import {
   AlertCircle,
   BookOpen,
   ArrowRight,
+  RefreshCw,
+  Info,
 } from "lucide-react"
+import {
+  addGeneratedJE,
+  getJEForTransaction,
+  getNextJENumber,
+  subscribe,
+  type GeneratedJE,
+} from "@/lib/je-store"
 
 interface Transaction {
   id: string
@@ -49,16 +58,6 @@ interface Transaction {
   status: "Mapped" | "Pending" | "Review"
   jeStatus?: "none" | "generating" | "generated" | "error"
   jeId?: string
-}
-
-interface GeneratedJE {
-  id: string
-  txId: string
-  debitAccount: string
-  creditAccount: string
-  amount: number
-  memo: string
-  createdAt: string
 }
 
 const mockTransactions: Transaction[] = [
@@ -156,10 +155,16 @@ function TransactionsContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<string | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions.map(tx => ({ ...tx, jeStatus: "none" as const })))
-  const [generatedJEs, setGeneratedJEs] = useState<GeneratedJE[]>([])
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [showJEDialog, setShowJEDialog] = useState(false)
   const [selectedJE, setSelectedJE] = useState<GeneratedJE | null>(null)
+  const [, forceUpdate] = useState(0)
+
+  // Subscribe to JE store updates
+  useEffect(() => {
+    const unsubscribe = subscribe(() => forceUpdate(n => n + 1))
+    return unsubscribe
+  }, [])
 
   const filteredTransactions = transactions.filter(tx => {
     if (filterType && tx.eventType !== filterType) return false
@@ -196,10 +201,10 @@ function TransactionsContent() {
     }
   }
 
-  // Generate JE for a single transaction
-  const generateJE = async (txId: string) => {
+  // Generate or regenerate JE for a single transaction
+  const generateJE = async (txId: string, isRegenerate = false) => {
     const tx = transactions.find(t => t.id === txId)
-    if (!tx || tx.jeStatus === "generated") return
+    if (!tx) return
 
     // Set generating state
     setTransactions(prev => prev.map(t => 
@@ -210,19 +215,30 @@ function TransactionsContent() {
     await new Promise(resolve => setTimeout(resolve, 1200))
 
     const accounts = getJEAccounts(tx)
-    const jeId = `JE-${Date.now()}-${txId}`
+    const jeNumber = getNextJENumber()
+    const jeId = `${jeNumber}-${txId}`
     
     const newJE: GeneratedJE = {
       id: jeId,
       txId: tx.id,
+      txHash: tx.txHash,
+      jeNumber,
+      date: tx.date,
+      eventType: tx.eventType,
+      asset: tx.asset,
       debitAccount: accounts.debit,
       creditAccount: accounts.credit,
       amount: tx.fairValue,
       memo: `${tx.eventType} ${tx.amount} ${tx.asset} on ${tx.date} (Block ${tx.block})`,
       createdAt: new Date().toISOString(),
+      status: "Draft",
+      source: "auto",
+      ...(isRegenerate && { lastModified: new Date().toISOString(), modifiedReason: "Regenerated" }),
     }
 
-    setGeneratedJEs(prev => [...prev, newJE])
+    // Add to shared store
+    addGeneratedJE(newJE)
+
     setTransactions(prev => prev.map(t => 
       t.id === txId ? { ...t, jeStatus: "generated" as const, jeId } : t
     ))
@@ -246,7 +262,7 @@ function TransactionsContent() {
 
   // View generated JE details
   const viewJE = (txId: string) => {
-    const je = generatedJEs.find(j => j.txId === txId)
+    const je = getJEForTransaction(txId)
     if (je) {
       setSelectedJE(je)
       setShowJEDialog(true)
@@ -508,20 +524,45 @@ function TransactionsContent() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {tx.jeStatus === "generated" ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-7 text-xs gap-1 text-primary"
-                            onClick={() => viewJE(tx.id)}
-                          >
-                            <BookOpen className="size-3" />
-                            View JE
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>View the generated journal entry</TooltipContent>
-                      </Tooltip>
+                      <div className="flex items-center justify-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1 text-primary"
+                              onClick={() => viewJE(tx.id)}
+                            >
+                              <BookOpen className="size-3" />
+                              View
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View the generated journal entry</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => generateJE(tx.id, true)}
+                            >
+                              <RefreshCw className="size-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs text-xs">
+                            <p className="font-medium">Regenerate Journal Entry</p>
+                            <p className="text-muted-foreground mt-1">
+                              Regenerate only if:
+                            </p>
+                            <ul className="text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                              <li>Wallet data was reindexed</li>
+                              <li>Fair value pricing was updated</li>
+                              <li>Manual edits need to be reset</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     ) : tx.jeStatus === "generating" ? (
                       <Button variant="ghost" size="sm" className="h-7 text-xs" disabled>
                         <Loader2 className="size-3 animate-spin" />
@@ -540,9 +581,9 @@ function TransactionsContent() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs text-xs">
-                          <p>Create a journal entry for this transaction</p>
+                          <p className="font-medium">Generate Journal Entry</p>
                           <p className="text-muted-foreground mt-1">
-                            Generates debit/credit entries based on the {tx.eventType.toLowerCase()} event type
+                            Creates a double-entry accounting record (debit &amp; credit) for this {tx.eventType.toLowerCase()} transaction.
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -587,9 +628,14 @@ function TransactionsContent() {
           {selectedJE && (
             <div className="space-y-4 mt-2">
               <div className="rounded-lg border border-border/60 overflow-hidden">
-                <div className="bg-muted/30 px-4 py-2 border-b border-border/40">
-                  <p className="text-xs font-medium text-muted-foreground">JE Reference</p>
-                  <p className="font-mono text-sm">{selectedJE.id}</p>
+                <div className="bg-muted/30 px-4 py-2 border-b border-border/40 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">JE Reference</p>
+                    <p className="font-mono text-sm font-semibold">{selectedJE.jeNumber}</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedJE.eventType} - {selectedJE.asset}
+                  </Badge>
                 </div>
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-dashed border-border/40">
@@ -616,11 +662,27 @@ function TransactionsContent() {
                 <p className="text-xs text-muted-foreground mb-1">Memo / Description</p>
                 <p className="text-sm">{selectedJE.memo}</p>
               </div>
+              {selectedJE.lastModified && (
+                <div className="bg-warning-muted/50 border border-warning/30 rounded-lg p-3 flex items-start gap-2">
+                  <Info className="size-4 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-warning">Regenerated Entry</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      This JE was regenerated on {new Date(selectedJE.lastModified).toLocaleString()}.
+                      {selectedJE.modifiedReason && ` Reason: ${selectedJE.modifiedReason}`}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/40">
                 <span>Created: {new Date(selectedJE.createdAt).toLocaleString()}</span>
-                <Badge variant="outline" className="border-success/50 text-success gap-1">
+                <Badge variant="outline" className={
+                  selectedJE.status === "Approved" 
+                    ? "border-success/50 text-success gap-1"
+                    : "border-primary/50 text-primary gap-1"
+                }>
                   <CheckCircle2 className="size-3" />
-                  Ready for Review
+                  {selectedJE.status === "Approved" ? "Approved" : "Draft - Ready for Review"}
                 </Badge>
               </div>
             </div>
