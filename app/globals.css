@@ -81,89 +81,90 @@
     --space-24: 6rem;        /* 96px */
     
     /* -------------------------------------------------------------------------
-       Light Mode Color Palette - Emerald Enterprise Theme
+       Light Mode Color Palette - Vercel / Geist Theme
+       Neutral grayscale with a single blue accent (Geist UI palette)
        ------------------------------------------------------------------------- */
-    --background: 160 15% 97%;
-    --foreground: 160 10% 12%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
     
     /* Surface Colors (Elevation Hierarchy) */
-    --surface-0: 160 15% 97%;        /* Base background */
+    --surface-0: 0 0% 100%;          /* Base background */
     --surface-1: 0 0% 100%;          /* Cards, elevated panels */
-    --surface-2: 160 10% 95%;        /* Nested elements */
-    --surface-3: 160 10% 93%;        /* Deeply nested */
+    --surface-2: 0 0% 98%;           /* Nested elements */
+    --surface-3: 0 0% 96%;           /* Deeply nested */
     
     /* Card & Popover */
     --card: 0 0% 100%;
-    --card-foreground: 160 10% 12%;
+    --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 160 10% 12%;
+    --popover-foreground: 0 0% 9%;
     
-    /* Primary - Emerald */
-    --primary: 160 84% 39%;
+    /* Primary - Geist Blue */
+    --primary: 212 100% 48%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 160 84% 35%;
-    --primary-active: 160 84% 30%;
-    --primary-muted: 160 50% 92%;
+    --primary-hover: 212 100% 43%;
+    --primary-active: 212 100% 38%;
+    --primary-muted: 212 100% 96%;
     
     /* Secondary - Neutral Gray */
-    --secondary: 160 10% 92%;
-    --secondary-foreground: 160 10% 25%;
-    --secondary-hover: 160 10% 88%;
-    --secondary-active: 160 10% 84%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 20%;
+    --secondary-hover: 0 0% 92%;
+    --secondary-active: 0 0% 88%;
     
     /* Muted - Subdued elements */
-    --muted: 160 10% 94%;
-    --muted-foreground: 160 8% 45%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
     
-    /* Accent - Emerald tinted */
-    --accent: 160 40% 92%;
-    --accent-foreground: 160 84% 30%;
+    /* Accent - Subtle gray */
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
     
     /* Semantic Colors */
-    --destructive: 0 72% 51%;
+    --destructive: 358 75% 47%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-muted: 0 72% 95%;
+    --destructive-muted: 358 100% 97%;
     
-    --success: 160 84% 39%;
+    --success: 142 71% 35%;
     --success-foreground: 0 0% 100%;
-    --success-muted: 160 50% 92%;
+    --success-muted: 142 71% 95%;
     
-    --warning: 38 92% 50%;
+    --warning: 38 92% 47%;
     --warning-foreground: 0 0% 10%;
     --warning-muted: 38 92% 95%;
     
-    --info: 199 89% 48%;
+    --info: 212 100% 48%;
     --info-foreground: 0 0% 100%;
-    --info-muted: 199 89% 95%;
+    --info-muted: 212 100% 96%;
     
     /* Borders & Inputs */
-    --border: 160 10% 88%;
-    --border-muted: 160 10% 92%;
-    --border-strong: 160 10% 80%;
-    --input: 160 10% 88%;
-    --ring: 160 84% 39%;
+    --border: 0 0% 92%;
+    --border-muted: 0 0% 95%;
+    --border-strong: 0 0% 85%;
+    --input: 0 0% 92%;
+    --ring: 212 100% 48%;
     
     /* Text Colors */
-    --text-primary: 160 10% 12%;
-    --text-secondary: 160 8% 40%;
-    --text-tertiary: 160 6% 55%;
-    --text-disabled: 160 4% 70%;
+    --text-primary: 0 0% 9%;
+    --text-secondary: 0 0% 40%;
+    --text-tertiary: 0 0% 53%;
+    --text-disabled: 0 0% 70%;
     --text-inverse: 0 0% 100%;
     
-    /* Chart Colors - Emerald palette */
-    --chart-1: 160 84% 39%;      /* Emerald */
-    --chart-2: 172 66% 50%;      /* Teal */
-    --chart-3: 199 89% 48%;      /* Cyan */
-    --chart-4: 142 71% 45%;      /* Green */
-    --chart-5: 38 92% 50%;       /* Amber */
-    --chart-6: 0 72% 51%;        /* Red */
-    --chart-7: 262 83% 58%;      /* Violet */
-    --chart-8: 160 10% 40%;      /* Gray */
+    /* Chart Colors - Vercel palette */
+    --chart-1: 212 100% 48%;     /* Blue */
+    --chart-2: 270 67% 55%;      /* Purple */
+    --chart-3: 142 71% 35%;      /* Green */
+    --chart-4: 38 92% 47%;       /* Amber */
+    --chart-5: 330 81% 56%;      /* Pink */
+    --chart-6: 358 75% 47%;      /* Red */
+    --chart-7: 192 91% 42%;      /* Cyan */
+    --chart-8: 0 0% 45%;         /* Gray */
     
     /* Financial-specific Colors */
-    --positive: 160 84% 39%;     /* Gains, profits - Emerald */
-    --negative: 0 72% 51%;       /* Losses, debits */
-    --neutral: 160 10% 50%;      /* Unchanged */
+    --positive: 142 71% 35%;     /* Gains, profits - Green */
+    --negative: 358 75% 47%;     /* Losses, debits - Red */
+    --neutral: 0 0% 45%;         /* Unchanged */
     
     --radius: 0.5rem;
     --radius-sm: 0.375rem;
@@ -173,15 +174,15 @@
     --radius-2xl: 1.5rem;
     --radius-full: 9999px;
     
-    /* Sidebar - Dark sidebar with emerald accent */
-    --sidebar-background: 160 20% 8%;
-    --sidebar-foreground: 160 10% 85%;
-    --sidebar-primary: 160 84% 39%;
+    /* Sidebar - Light, clean Vercel style */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 25%;
+    --sidebar-primary: 212 100% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 20% 15%;
-    --sidebar-accent-foreground: 160 84% 50%;
-    --sidebar-border: 160 15% 15%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 92%;
+    --sidebar-ring: 212 100% 48%;
     
     /* Shadows (Light Mode) */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
@@ -213,97 +214,97 @@
      Dark Mode Color Palette
      ------------------------------------------------------------------------- */
   .dark {
-    --background: 220 16% 9%;
-    --foreground: 220 14% 90%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 93%;
     
     /* Surface Colors (Elevation Hierarchy) */
-    --surface-0: 220 16% 9%;         /* Base background */
-    --surface-1: 220 17% 12%;        /* Cards, elevated panels */
-    --surface-2: 220 17% 15%;        /* Nested elements */
-    --surface-3: 220 17% 18%;        /* Deeply nested */
+    --surface-0: 0 0% 4%;            /* Base background */
+    --surface-1: 0 0% 7%;            /* Cards, elevated panels */
+    --surface-2: 0 0% 10%;           /* Nested elements */
+    --surface-3: 0 0% 13%;           /* Deeply nested */
     
     /* Card & Popover */
-    --card: 220 17% 12%;
-    --card-foreground: 220 14% 90%;
-    --popover: 220 17% 14%;
-    --popover-foreground: 220 14% 90%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 93%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 93%;
     
-    /* Primary */
-    --primary: 215 75% 60%;
+    /* Primary - Geist Blue */
+    --primary: 212 100% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 215 75% 65%;
-    --primary-active: 215 75% 55%;
-    --primary-muted: 215 40% 20%;
+    --primary-hover: 212 100% 62%;
+    --primary-active: 212 100% 50%;
+    --primary-muted: 212 80% 16%;
     
     /* Secondary */
-    --secondary: 220 17% 18%;
-    --secondary-foreground: 220 14% 80%;
-    --secondary-hover: 220 17% 22%;
-    --secondary-active: 220 17% 26%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 88%;
+    --secondary-hover: 0 0% 16%;
+    --secondary-active: 0 0% 20%;
     
     /* Muted */
-    --muted: 220 17% 16%;
-    --muted-foreground: 220 12% 60%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 56%;
     
     /* Accent */
-    --accent: 215 40% 20%;
-    --accent-foreground: 215 75% 70%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 93%;
     
     /* Semantic Colors */
-    --destructive: 0 75% 60%;
+    --destructive: 358 75% 59%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-muted: 0 50% 20%;
+    --destructive-muted: 358 60% 16%;
     
-    --success: 140 65% 55%;
+    --success: 142 69% 45%;
     --success-foreground: 0 0% 100%;
-    --success-muted: 140 40% 18%;
+    --success-muted: 142 50% 14%;
     
-    --warning: 35 90% 60%;
-    --warning-foreground: 0 0% 12%;
-    --warning-muted: 35 50% 18%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 10%;
+    --warning-muted: 38 60% 16%;
     
-    --info: 200 80% 60%;
+    --info: 212 100% 56%;
     --info-foreground: 0 0% 100%;
-    --info-muted: 200 50% 18%;
+    --info-muted: 212 70% 16%;
     
     /* Borders */
-    --border: 220 17% 18%;
-    --border-muted: 220 17% 15%;
-    --border-strong: 220 17% 25%;
-    --input: 220 17% 18%;
-    --ring: 215 75% 60%;
+    --border: 0 0% 16%;
+    --border-muted: 0 0% 12%;
+    --border-strong: 0 0% 24%;
+    --input: 0 0% 16%;
+    --ring: 212 100% 56%;
     
     /* Text Colors */
-    --text-primary: 220 14% 90%;
-    --text-secondary: 220 12% 70%;
-    --text-tertiary: 220 10% 55%;
-    --text-disabled: 220 8% 40%;
-    --text-inverse: 220 15% 12%;
+    --text-primary: 0 0% 93%;
+    --text-secondary: 0 0% 63%;
+    --text-tertiary: 0 0% 50%;
+    --text-disabled: 0 0% 35%;
+    --text-inverse: 0 0% 4%;
     
     /* Charts */
-    --chart-1: 215 75% 60%;
-    --chart-2: 140 65% 55%;
-    --chart-3: 35 90% 60%;
-    --chart-4: 260 75% 65%;
-    --chart-5: 180 65% 55%;
-    --chart-6: 340 75% 60%;
-    --chart-7: 45 85% 60%;
-    --chart-8: 280 70% 60%;
+    --chart-1: 212 100% 56%;
+    --chart-2: 270 67% 62%;
+    --chart-3: 142 69% 45%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 330 81% 62%;
+    --chart-6: 358 75% 59%;
+    --chart-7: 192 91% 50%;
+    --chart-8: 0 0% 60%;
     
     /* Financial-specific Colors */
-    --positive: 140 65% 55%;
-    --negative: 0 70% 60%;
-    --neutral: 220 10% 55%;
+    --positive: 142 69% 45%;
+    --negative: 358 75% 59%;
+    --neutral: 0 0% 56%;
     
-    /* Sidebar */
-    --sidebar-background: 220 18% 10%;
-    --sidebar-foreground: 220 14% 85%;
-    --sidebar-primary: 215 75% 60%;
+    /* Sidebar - Near-black Vercel style */
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 63%;
+    --sidebar-primary: 212 100% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 18% 16%;
-    --sidebar-accent-foreground: 215 75% 70%;
-    --sidebar-border: 220 18% 15%;
-    --sidebar-ring: 215 75% 60%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 93%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 212 100% 56%;
     
     /* Shadows (Dark Mode - More prominent) */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.15);
