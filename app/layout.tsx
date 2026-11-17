@@ -1,10 +1,16 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Red_Hat_Display, Red_Hat_Text, Red_Hat_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
+const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], variable: "--font-red-hat-display" });
+const redHatText = Red_Hat_Text({ subsets: ["latin"], variable: "--font-red-hat-text" });
+const redHatMono = Red_Hat_Mono({ subsets: ["latin"], variable: "--font-red-hat-mono" });
+
+export const viewport: Viewport = {
+  themeColor: '#04040b',
+  colorScheme: 'dark',
+}
 
 export const metadata: Metadata = {
   title: 'Compound Reporting | Enterprise DeFi Accounting',
@@ -22,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${_geist.variable} ${_geistMono.variable} dark`} suppressHydrationWarning>
+    <html lang="en" className={`${redHatDisplay.variable} ${redHatText.variable} ${redHatMono.variable} dark`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

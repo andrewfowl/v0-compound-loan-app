@@ -338,7 +338,7 @@ function SchedulesContent() {
                               href={getEtherscanUrl(tx.txHash)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
+                              className="text-link hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
                               title={tx.txHash}
                             >
                               {formatTxHash(tx.txHash)}
@@ -351,7 +351,7 @@ function SchedulesContent() {
                       {row.details!.additions.length > 3 && (
                         <button
                           onClick={() => openDrillDown(row, "additions", schedule === "loan" ? "New Borrows" : "New Supplies", row.additions)}
-                          className="text-primary hover:underline"
+                          className="text-link hover:underline"
                         >
                           + {row.details!.additions.length - 3} more
                         </button>
@@ -375,7 +375,7 @@ function SchedulesContent() {
                               href={getEtherscanUrl(tx.txHash)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
+                              className="text-link hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
                               title={tx.txHash}
                             >
                               {formatTxHash(tx.txHash)}
@@ -406,7 +406,7 @@ function SchedulesContent() {
                               href={getEtherscanUrl(tx.txHash)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
+                              className="text-link hover:underline inline-flex items-center gap-1 font-mono text-[11px]"
                               title={tx.txHash}
                             >
                               {formatTxHash(tx.txHash)}
@@ -666,7 +666,7 @@ function SchedulesContent() {
                           href={getEtherscanUrl(tx.txHash)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary hover:underline inline-flex items-center gap-1"
+                          className="text-link hover:underline inline-flex items-center gap-1"
                           title={tx.txHash}
                         >
                           <span className="font-mono text-xs">{formatTxHash(tx.txHash)}</span>

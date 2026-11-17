@@ -490,7 +490,7 @@ function TransactionsContent() {
                       href={`https://etherscan.io/tx/${tx.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs font-mono text-primary hover:underline"
+                      className="flex items-center gap-1.5 text-xs font-mono text-link hover:underline"
                     >
                       {tx.txHash}
                       <ExternalLink className="size-3" />

@@ -97,6 +97,14 @@ const config: Config = {
         },
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+
+        // Depot accents
+        link: 'hsl(var(--link, var(--primary)))',
+        lilac: {
+          DEFAULT: 'hsl(var(--lilac, var(--primary)))',
+          muted: 'hsl(var(--lilac-muted, var(--muted)))',
+          border: 'hsl(var(--plum-edge, var(--border)))',
+        },
         
         // Text colors
         text: {
@@ -246,9 +254,9 @@ const config: Config = {
         'sm': 'calc(var(--radius) - 4px)',
         'md': 'calc(var(--radius) - 2px)',
         'lg': 'var(--radius)',
-        'xl': 'calc(var(--radius) + 4px)',
-        '2xl': 'calc(var(--radius) + 8px)',
-        '3xl': 'calc(var(--radius) + 12px)',
+        'xl': 'var(--radius)',
+        '2xl': 'var(--radius)',
+        '3xl': 'var(--radius)',
         'full': '9999px',
       },
       

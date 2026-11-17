@@ -131,7 +131,7 @@ function JournalEntryRow({ entry }: { entry: JournalEntry }) {
               href={`https://etherscan.io/tx/${entry.txHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:underline shrink-0"
+              className="inline-flex items-center gap-0.5 text-[10px] text-link hover:underline shrink-0"
               title={`View on Etherscan: ${entry.txHash}`}
             >
               <ExternalLink className="h-3 w-3" />

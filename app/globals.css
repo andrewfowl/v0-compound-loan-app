@@ -27,9 +27,9 @@
 @layer base {
   :root {
     /* Font Stacks */
-    --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--font-red-hat-text), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: var(--font-red-hat-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --font-display: var(--font-red-hat-display), ui-sans-serif, system-ui, sans-serif;
     
     /* Typography Scale (Major Third - 1.25) */
     --text-xs: 0.64rem;      /* 10.24px */
@@ -166,12 +166,13 @@
     --negative: 358 75% 47%;     /* Losses, debits - Red */
     --neutral: 0 0% 45%;         /* Unchanged */
     
-    --radius: 0.5rem;
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-    --radius-2xl: 1.5rem;
+    /* Depot geometry: 6px max for cards/buttons/inputs, 2px for tags */
+    --radius: 6px;
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 6px;
+    --radius-xl: 6px;
+    --radius-2xl: 6px;
     --radius-full: 9999px;
     
     /* Sidebar - Light, clean Vercel style */
@@ -213,107 +214,115 @@
   /* -------------------------------------------------------------------------
      Dark Mode Color Palette
      ------------------------------------------------------------------------- */
+  /* -------------------------------------------------------------------------
+     Dark Mode - Depot "server-rack terminal" palette
+     Carbon canvas, graphite surface ladder, hairline Basalt borders,
+     Signal Green for primary action/success, Link Blue for links only,
+     Lilac for tertiary/decorative states.
+     ------------------------------------------------------------------------- */
   .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 93%;
+    --background: 240 47% 3%;          /* Carbon #04040b */
+    --foreground: 240 7% 94%;          /* Ash #eeeef0 */
     
-    /* Surface Colors (Elevation Hierarchy) */
-    --surface-0: 0 0% 4%;            /* Base background */
-    --surface-1: 0 0% 7%;            /* Cards, elevated panels */
-    --surface-2: 0 0% 10%;           /* Nested elements */
-    --surface-3: 0 0% 13%;           /* Deeply nested */
+    /* Surface ladder */
+    --surface-0: 240 47% 3%;           /* Carbon */
+    --surface-1: 270 6% 7%;            /* Graphite #121113 */
+    --surface-2: 270 4% 10%;           /* Obsidian #1a191b */
+    --surface-3: 260 4% 14%;           /* Slate #232225 */
     
-    /* Card & Popover */
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 93%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 93%;
+    --card: 270 6% 7%;
+    --card-foreground: 240 7% 94%;
+    --popover: 270 6% 7%;
+    --popover-foreground: 240 7% 94%;
     
-    /* Primary - Geist Blue */
-    --primary: 212 100% 56%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 212 100% 62%;
-    --primary-active: 212 100% 50%;
-    --primary-muted: 212 80% 16%;
+    /* Primary - Signal Green, dark Carbon text */
+    --primary: 131 50% 63%;            /* #71d083 */
+    --primary-foreground: 240 47% 3%;
+    --primary-hover: 131 50% 68%;
+    --primary-active: 131 45% 56%;
+    --primary-muted: 132 22% 14%;      /* Fern Ground #1b2a1e */
     
-    /* Secondary */
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 88%;
-    --secondary-hover: 0 0% 16%;
-    --secondary-active: 0 0% 20%;
+    --secondary: 260 4% 14%;           /* Slate */
+    --secondary-foreground: 240 7% 94%;
+    --secondary-hover: 264 5% 20%;     /* Iron */
+    --secondary-active: 270 5% 23%;    /* Pewter */
     
-    /* Muted */
-    --muted: 0 0% 11%;
-    --muted-foreground: 0 0% 56%;
+    --muted: 270 4% 10%;               /* Obsidian */
+    --muted-foreground: 251 5% 50%;    /* Fog #7c7a85 */
     
-    /* Accent */
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 93%;
+    --accent: 260 4% 14%;              /* Slate */
+    --accent-foreground: 0 0% 90%;     /* Chalk */
     
-    /* Semantic Colors */
-    --destructive: 358 75% 59%;
-    --destructive-foreground: 0 0% 100%;
-    --destructive-muted: 358 60% 16%;
+    /* Semantic */
+    --destructive: 359 68% 62%;
+    --destructive-foreground: 240 47% 3%;
+    --destructive-muted: 359 35% 13%;
     
-    --success: 142 69% 45%;
-    --success-foreground: 0 0% 100%;
-    --success-muted: 142 50% 14%;
+    --success: 131 50% 63%;            /* Signal Green */
+    --success-foreground: 240 47% 3%;
+    --success-muted: 132 22% 14%;      /* Fern Ground */
     
-    --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 10%;
-    --warning-muted: 38 60% 16%;
+    --warning: 40 85% 62%;
+    --warning-foreground: 240 47% 3%;
+    --warning-muted: 40 35% 13%;
     
-    --info: 212 100% 56%;
-    --info-foreground: 0 0% 100%;
-    --info-muted: 212 70% 16%;
+    --info: 210 100% 72%;              /* Link Blue */
+    --info-foreground: 240 47% 3%;
+    --info-muted: 213 45% 15%;
     
-    /* Borders */
-    --border: 0 0% 16%;
-    --border-muted: 0 0% 12%;
-    --border-strong: 0 0% 24%;
-    --input: 0 0% 16%;
-    --ring: 212 100% 56%;
+    /* Depot-specific accents */
+    --link: 210 100% 72%;              /* Link Blue #70b8ff */
+    --lilac: 253 100% 83%;             /* Lilac Accent #baa7ff */
+    --lilac-muted: 257 37% 12%;
+    --plum-edge: 257 37% 19%;          /* #291f43 */
+    --moss-border: 133 32% 26%;        /* #2d5736 */
     
-    /* Text Colors */
-    --text-primary: 0 0% 93%;
-    --text-secondary: 0 0% 63%;
-    --text-tertiary: 0 0% 50%;
-    --text-disabled: 0 0% 35%;
-    --text-inverse: 0 0% 4%;
+    /* Hairline borders */
+    --border: 270 5% 17%;              /* Basalt #2b292d */
+    --border-muted: 270 4% 12%;
+    --border-strong: 270 5% 23%;       /* Pewter */
+    --input: 270 5% 17%;
+    --ring: 131 50% 63%;
     
-    /* Charts */
-    --chart-1: 212 100% 56%;
-    --chart-2: 270 67% 62%;
-    --chart-3: 142 69% 45%;
-    --chart-4: 38 92% 55%;
-    --chart-5: 330 81% 62%;
-    --chart-6: 358 75% 59%;
-    --chart-7: 192 91% 50%;
-    --chart-8: 0 0% 60%;
+    /* Text */
+    --text-primary: 240 7% 94%;        /* Ash */
+    --text-secondary: 258 7% 72%;      /* Silver #b5b2bc */
+    --text-tertiary: 251 5% 50%;       /* Fog */
+    --text-disabled: 257 5% 29%;       /* Steel */
+    --text-inverse: 240 47% 3%;
     
-    /* Financial-specific Colors */
-    --positive: 142 69% 45%;
-    --negative: 358 75% 59%;
-    --neutral: 0 0% 56%;
+    /* Charts - green-led, blue + violet support, neutrals */
+    --chart-1: 131 50% 63%;
+    --chart-2: 210 100% 72%;
+    --chart-3: 253 100% 83%;
+    --chart-4: 132 31% 42%;
+    --chart-5: 40 85% 62%;
+    --chart-6: 359 68% 62%;
+    --chart-7: 258 7% 72%;
+    --chart-8: 251 5% 50%;
     
-    /* Sidebar - Near-black Vercel style */
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 63%;
-    --sidebar-primary: 212 100% 56%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 93%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 212 100% 56%;
+    --positive: 131 50% 63%;
+    --negative: 359 68% 62%;
+    --neutral: 251 5% 50%;
     
-    /* Shadows (Dark Mode - More prominent) */
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.15);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.20);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.25);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.40), 0 4px 6px -4px rgb(0 0 0 / 0.30);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35);
-    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.55);
-    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.20);
+    /* Sidebar - Graphite nav surface */
+    --sidebar-background: 270 6% 7%;
+    --sidebar-foreground: 258 7% 72%;
+    --sidebar-primary: 131 50% 63%;
+    --sidebar-primary-foreground: 240 47% 3%;
+    --sidebar-accent: 260 4% 14%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 270 5% 17%;
+    --sidebar-ring: 131 50% 63%;
+    
+    /* No drop shadows - inset top highlight only */
+    --shadow-xs: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+    --shadow-sm: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+    --shadow-md: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+    --shadow-lg: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+    --shadow-xl: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+    --shadow-2xl: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+    --shadow-inner: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
   }
 }
 
@@ -336,8 +345,19 @@
   
   body {
     @apply bg-background text-foreground min-h-screen;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    font-feature-settings: "rlig" 1, "calt" 1;
     text-rendering: optimizeLegibility;
+    /* Depot signature: body text runs slightly open */
+    letter-spacing: 0.025em;
+  }
+
+  /* Mono stays at natural spacing so figures and hashes align */
+  .font-mono,
+  code,
+  kbd,
+  pre,
+  samp {
+    letter-spacing: normal;
   }
   
   /* Focus States */
@@ -408,16 +428,25 @@
 
 @layer base {
   /* Headings */
+  /* Display family with tight tracking; Chalk for headings */
+  h1, .h1,
+  h2, .h2,
+  h3, .h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+    color: hsl(0 0% 90%);
+  }
+
   h1, .h1 {
-    @apply text-4xl font-bold tracking-tight leading-tight;
+    @apply text-4xl font-bold leading-tight;
   }
   
   h2, .h2 {
-    @apply text-3xl font-semibold tracking-tight leading-tight;
+    @apply text-3xl font-semibold leading-tight;
   }
   
   h3, .h3 {
-    @apply text-2xl font-semibold tracking-tight leading-snug;
+    @apply text-2xl font-semibold leading-snug;
   }
   
   h4, .h4 {

@@ -199,7 +199,7 @@ function JournalEntriesContent() {
         <Card className="bg-card border-border/60">
           <CardContent className="pt-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Draft</p>
-            <p className="text-2xl font-bold font-mono mt-1 text-primary">{draftCount}</p>
+            <p className="text-2xl font-bold font-mono mt-1 text-lilac">{draftCount}</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border/60">
@@ -245,7 +245,7 @@ function JournalEntriesContent() {
                       className={getEffectiveStatus(je) === "Approved" 
                         ? "border-success/50 text-success" 
                         : getEffectiveStatus(je) === "Draft"
-                        ? "border-primary/50 text-primary"
+                        ? "border-lilac-border bg-lilac-muted text-lilac"
                         : "border-warning/50 text-warning"
                       }
                     >

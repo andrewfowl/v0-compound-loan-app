@@ -51,7 +51,7 @@ export function TransactionsTab({ events }: TransactionsTabProps) {
                         href={`https://etherscan.io/tx/${event.transactionHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1"
+                        className="text-link hover:underline inline-flex items-center gap-1"
                       >
                         {formatAddress(event.transactionHash)}
                       </a>
